@@ -1,10 +1,10 @@
-# SignalTwin Developer Map
+# EduBox HUB Panel Developer Map
 
 This document is an orientation map of the project for developers. Its purpose is not to replace detailed API documentation in headers, but to quickly explain the workflow, component ownership, data flows, and places to modify during typical changes.
 
 ## What the project does
 
-SignalTwin Display is an LVGL HMI application for an ESP32-S3 7" display. The firmware displays devices defined in a JSON database, can connect selected devices to virtual pins, communicates with an upstream endpoint through the text-based VSCP protocol, and displays runtime values.
+EduBox HUB Panel is an LVGL HMI application for an ESP32-S3 7" display. The firmware displays devices defined in a JSON database, can connect selected devices to virtual pins, communicates with an upstream endpoint through the text-based VSCP protocol, and displays runtime values.
 
 Simplified flow:
 
@@ -18,7 +18,7 @@ ESP32 UI
   -> GUI draws current values, charts, and DataBundle records
 ```
 
-The upstream endpoint can be a Python emulator, EduBoxHub, or custom hardware implementing VSCP.
+The upstream endpoint can be a Python emulator, EduBox HUB, or custom hardware implementing VSCP.
 
 ## Root directories
 

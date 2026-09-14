@@ -1,6 +1,6 @@
 # VSCP Protocol
 
-VSCP (Virtual Sensors Communication Protocol) is a simple text-based protocol for communication between the SignalTwin HMI/firmware and a target board, real device, or emulator. The current project implementation uses VSCP API `1.4`.
+VSCP (Virtual Sensors Communication Protocol) is a simple text-based protocol for communication between the EduBox HUB Panel HMI/firmware and a target board, real device, or emulator. The current project implementation uses VSCP API `1.4`.
 
 The protocol follows a request-response model. The HMI always sends one command, and the counterpart responds with one response message. Runtime polling, configuration, control values, and pin assignment are all built on the same format.
 

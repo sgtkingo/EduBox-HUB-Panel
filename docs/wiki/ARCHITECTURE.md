@@ -1,10 +1,10 @@
-# SignalTwin Architecture Notes
+# EduBox HUB Panel Architecture Notes
 
-This document is a compact architectural reference for SignalTwin Display. For the full developer map, see [DEV_MAP_EN.md](../dev/DEV_MAP_EN.md). For the wire protocol, see [PROTOCOL_EN.md](../PROTOCOL_EN.md).
+This document is a compact architectural reference for EduBox HUB Panel. For the full developer map, see [DEV_MAP_EN.md](../dev/DEV_MAP_EN.md). For the wire protocol, see [PROTOCOL_EN.md](../PROTOCOL_EN.md).
 
 ## Scope
 
-SignalTwin Display is an ESP32-S3 LVGL HMI for viewing, controlling, and recording device data. It does not own the physical sensor logic in the general case. Instead, it loads a local device catalog, lets the user choose devices and pins, and talks to an upstream endpoint through VSCP.
+EduBox HUB Panel is an ESP32-S3 LVGL HMI for viewing, controlling, and recording device data. It does not own the physical sensor logic in the general case. Instead, it loads a local device catalog, lets the user choose devices and pins, and talks to an upstream endpoint through VSCP.
 
 Supported upstream endpoints:
 

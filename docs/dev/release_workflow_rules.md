@@ -1,6 +1,6 @@
 # Release Workflow Rules
 
-SignalTwin uses a commit-message driven release flow on `main`. The automated workflow bumps the version, synchronizes generated metadata, builds firmware, refreshes `bin/latest`, creates a version tag, and publishes a GitHub Release.
+EduBox HUB Panel uses a commit-message driven release flow on `main`. The automated workflow bumps the version, synchronizes generated metadata, builds firmware, refreshes `bin/latest`, creates a version tag, and publishes a GitHub Release.
 
 Workflow files:
 

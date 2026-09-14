@@ -32,7 +32,7 @@ For Transfer Mode builds:
 5. Build with `STORAGE_OPTION_SD` when you want PC file transfer. SPIFFS is kept
    for demo/debug storage and is not shared over USB.
 
-Relevant config flags live in [libraries/engine/src/config.hpp](/D:/Prace/MTA/SignalTwinProject/libraries/engine/src/config.hpp):
+Relevant config flags live in [`libraries/engine/src/config.hpp`](../libraries/engine/src/config.hpp):
 
 - `FILE_TRANSFER_USB_MSC_ENABLED`: enables the USB MSC bridge.
 - `FILE_TRANSFER_USB_MSC_VENDOR_ID`
@@ -53,7 +53,7 @@ error instead of pretending to mount a drive.
 
 ## Persistent storage
 
-The runtime storage backend is selected in [libraries/engine/src/config.hpp](/D:/Prace/MTA/SignalTwinProject/libraries/engine/src/config.hpp) via `STORAGE_OPTION`.
+The runtime storage backend is selected in [`libraries/engine/src/config.hpp`](../libraries/engine/src/config.hpp) via `STORAGE_OPTION`.
 
 - `STORAGE_OPTION_SD`: persistent data is read from the SD card. The device catalog is expected at `/data/DB.json`.
 - `STORAGE_OPTION_SPIFFS`: persistent data is read from internal flash SPIFFS. The device catalog is expected at `/DB.json`.
@@ -159,5 +159,5 @@ This `ui.ino.bin` file can be burnt to the board's app0 partition at offset 0x10
 With this board-template you might encounter some Parallel-RGB vs LVGL-flush synchronization issues if you use computing-heavy or alpha-channel graphic contents like big shadows. According to our research it comes from low-level IO code in Arduino-IDE related to the display-driver, probably GDMA-priority related pixeldata-delays to the ESP32S3's LCD-controller. (ESP-IDF version doesn't have this problem.)
 
 
-2024 SquareLine, 2026 SignalTwin (MTA)
+2024 SquareLine, 2026 EduBox HUB Panel (MTA)
 

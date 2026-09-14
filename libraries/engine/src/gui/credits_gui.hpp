@@ -43,10 +43,10 @@ private:
     lv_style_t style_footer;
 
     // --- Static Text Assets (Stored in Flash/RODATA) ---
-    static constexpr const char *txt_title = "About Signal Twin";
+    static constexpr const char *txt_title = "About EduBox HUB Panel";
 
     static constexpr const char *txt_intro =
-        "Signal Twin is an embedded HMI for VSCP device connection, live signal visualization, recording and DataBundle review.\n This project was developed as part of the EduBox HUB project under the www.m-ta.cz (MTA).";
+        "EduBox HUB Panel is an embedded HMI for VSCP device connection, live signal visualization, recording and DataBundle review.\n This project was developed as part of the EduBox HUB ecosystem under www.m-ta.cz (MTA).";
 
     static constexpr const char *txt_section_authors =
         "Authors:\n"

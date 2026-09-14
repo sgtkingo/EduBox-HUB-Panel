@@ -1,6 +1,6 @@
-# SignalTwin ✨🧬
+# EduBox HUB Panel
 
-[![Build Firmware](https://github.com/sgtkingo/SignalTwinProject/actions/workflows/build.yml/badge.svg)](https://github.com/sgtkingo/SignalTwinProject/actions/workflows/build.yml)
+[![Build Firmware](https://github.com/sgtkingo/EduBox-HUB-Panel/actions/workflows/build.yml/badge.svg)](https://github.com/sgtkingo/EduBox-HUB-Panel/actions/workflows/build.yml)
 [![Chip: ESP32-S3](https://img.shields.io/badge/chip-ESP32--S3-ef4444)](https://www.espressif.com/en/products/socs/esp32-s3)
 [![Platform: ESP32](https://img.shields.io/badge/platform-ESP32-0f766e)](https://docs.espressif.com/projects/arduino-esp32/en/latest/)
 [![Language: C++](https://img.shields.io/badge/language-C%2B%2B-00599C)](https://isocpp.org/)
@@ -9,15 +9,15 @@
 
 **Current development version:** `latest`
 
-SignalTwin Display is a lightweight **HMI/visualization client** for exploring sensor data in real time 🖥️.
+**EduBox HUB Panel** is the touch HMI branch of the [EduBox HUB](https://github.com/sgtkingo/EduBox-HUB) ecosystem and a lightweight visualization client for exploring sensor data in real time 🖥️.
 It focuses on **raw vs. processed comparisons**, **interactive inspection**, and **data capture** for later analysis
-— while educational modules live *above* this layer (e.g., in EduBox HUB or external course content). SignalTwin is developing under the [MTA](https://www.m-ta.cz) EduBox HUB project.
+— while educational modules live *above* this layer (e.g., in EduBox HUB or external course content). The Panel is developed as part of the [MTA](https://www.m-ta.cz) EduBox HUB project.
 
 ## 🧩 Target Hardware
 
-![SignalTwin Display – Use-case](docs/img/panel_apps.png)
+![EduBox HUB Panel – Use-case](docs/img/panel_apps.png)
 
-SignalTwin Display is designed and tested for the **Elecrow ESP32 Display 7" HMI (ESP32-S3 + RGB TFT + Touch, LVGL-ready)**:
+EduBox HUB Panel is designed and tested for the **Elecrow ESP32 Display 7" HMI (ESP32-S3 + RGB TFT + Touch, LVGL-ready)**:
 
 - 🔗 [Distributor / purchase link](https://www.elecrow.com/esp32-display-7-inch-hmi-display-rgb-tft-lcd-touch-screen-support-lvgl.html)
 
@@ -42,7 +42,7 @@ SignalTwin Display is designed and tested for the **Elecrow ESP32 Display 7" HMI
 
 ## 🔗 Connectivity Model
 
-SignalTwin Display does not read sensors directly in the general case.
+EduBox HUB Panel does not read sensors directly in the general case.
 It requires an upstream source that speaks our open protocol:
 
 ### 🔌 Supported Upstream Sources
@@ -53,13 +53,13 @@ It requires an upstream source that speaks our open protocol:
 ### 📡 Protocol: VSCP (Virtual Sensors Communication Protocol)
 Communication is done via a **text-based, REST-like protocol**:
 
-- 📚 Spec / reference repo: https://github.com/sgtkingo/VSCP
+- 📚 Spec / reference repo: https://github.com/sgtkingo/EduBox-HUB-VSCP
 
 ---
 
 ## ⚙️ Configuration & I/O (Bidirectional)
 
-Beyond passive viewing, SignalTwin Display supports operational control via the upstream platform:
+Beyond passive viewing, EduBox HUB Panel supports operational control via the upstream platform:
 
 - 🔌 **Dynamic pin mapping**: set which physical pins a real sensor is connected to (runtime configuration).
 - 🔁 **Bidirectional messaging**:
@@ -97,7 +97,7 @@ The bundled test catalog includes `H00` / **Temperature Regulator**:
 
 ## 🧭 Typical Workflow
 
-1. 🔗 Connect SignalTwin Display to **PC Emulator** or **EduBoxHub** (or a VSCP-capable custom device).
+1. 🔗 Connect EduBox HUB Panel to **PC Emulator** or **EduBox HUB** (or a VSCP-capable custom device).
 2. 🔎 Select a sensor/channel and inspect **raw vs. processed** outputs.
 3. 💾 Record a session into **DataBundle** and export **CSV to SD**.
 4. 📊 Analyze captured data offline (Python/Excel/Matlab).
@@ -106,11 +106,11 @@ The bundled test catalog includes `H00` / **Temperature Regulator**:
 
 ## 🔄 Recommended: Automatic Firmware Updates (Firmupdater)
 
-SignalTwin Display is designed for **frequent deployments** (labs, classrooms, hotfix builds), so **automatic firmware updates are strongly recommended** via **Firmupdater**: https://github.com/sgtkingo/Firmupdater.
+EduBox HUB Panel is designed for **frequent deployments** (labs, classrooms, hotfix builds), so **automatic firmware updates are strongly recommended** via **Firmupdater**: https://github.com/sgtkingo/EduBox-HUB-Panel-Firmupdater.
 
 Firmupdater automatically checks for newer versions and applies updates **with minimal manual intervention**—perfect for managing multiple devices in parallel. 🚀
 
-📖 Learn more: https://github.com/sgtkingo/Firmupdater
+📖 Learn more: https://github.com/sgtkingo/EduBox-HUB-Panel-Firmupdater
 🌐 Online live-app: https://sgtkingo.github.io/Firmupdater/
 
 ---
@@ -162,7 +162,7 @@ Contributions are welcome, especially:
 - 🧱 DataBundle/CSV improvements and schema stability,
 - 📖 new sensor Wiki pages.
 
-📨 Please include: device/source type (PC/EduBoxHub/custom), VSCP message example, and expected output.
+📨 Please include: device/source type (PC/EduBox HUB/custom), VSCP message example, and expected output.
 
 ---
 

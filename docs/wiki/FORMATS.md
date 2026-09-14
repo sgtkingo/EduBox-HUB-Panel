@@ -1,6 +1,6 @@
-# SignalTwin Data Formats
+# EduBox HUB Panel Data Formats
 
-This document describes the stable data files and generated artifacts used by SignalTwin Display. For behavior-level context, see [Architecture Notes](ARCHITECTURE.md) and [PROTOCOL_EN.md](../PROTOCOL_EN.md).
+This document describes the stable data files and generated artifacts used by EduBox HUB Panel. For behavior-level context, see [Architecture Notes](ARCHITECTURE.md) and [PROTOCOL_EN.md](../PROTOCOL_EN.md).
 
 ## Repository Data Sources
 

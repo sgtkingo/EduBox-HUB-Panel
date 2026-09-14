@@ -1,4 +1,4 @@
-# SignalTwin Developer Map
+# EduBox HUB Panel Developer Map
 
 Tento dokument je orientacni mapa projektu pro vyvojare. Cilem neni nahradit
 detailni API dokumentaci v hlavickach, ale rychle vysvetlit workflow, vlastnictvi
@@ -6,7 +6,7 @@ komponent, datove toky a mista, kam sahnout pri typickych upravach.
 
 ## Co projekt dela
 
-SignalTwin Display je LVGL HMI aplikace pro ESP32-S3 7" displej. Firmware zobrazuje
+EduBox HUB Panel je LVGL HMI aplikace pro ESP32-S3 7" displej. Firmware zobrazuje
 zarizeni definovana v JSON databazi, umi pripojit vybrana zarizeni na virtualni piny,
 komunikuje s upstream endpointem pres textovy protokol VSCP a zobrazuje runtime hodnoty.
 
@@ -22,7 +22,7 @@ ESP32 UI
   -> GUI kresli aktualni hodnoty, grafy a DataBundle zaznamy
 ```
 
-Upstream muze byt Python emulator, EduBoxHub nebo vlastni hardware implementujici VSCP.
+Upstream muze byt Python emulator, EduBox HUB nebo vlastni hardware implementujici VSCP.
 
 ## Root adresare
 

@@ -1,6 +1,6 @@
-# SignalTwin Wiki Guide
+# EduBox HUB Panel Wiki Guide
 
-The SignalTwin "wiki" is currently the user-facing knowledge carried by the device catalog: device names, descriptions, images, values, configuration metadata, units, ranges, options, and pin labels. The catalog powers the HMI library, runtime screen, emulator defaults, and generated firmware fallback data.
+The EduBox HUB Panel "wiki" is currently the user-facing knowledge carried by the device catalog: device names, descriptions, images, values, configuration metadata, units, ranges, options, and pin labels. The catalog powers the HMI library, runtime screen, emulator defaults, and generated firmware fallback data.
 
 For the schema reference, see [FORMATS.md](FORMATS.md).
 
@@ -218,7 +218,7 @@ python storage/sync_db.py
 Recommended checks:
 
 ```bash
-python -m json.tool storage/data/DB.json > /tmp/signaltwin-db-check.json
+python -m json.tool storage/data/DB.json > /tmp/edubox-panel-db-check.json
 python storage/sync_db.py --dry-run
 ```
 
