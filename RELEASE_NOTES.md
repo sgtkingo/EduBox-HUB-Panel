@@ -17,7 +17,7 @@
   The sketch constructs `HardwareSerial`, `StreamTransport`, and one shared
   `Client`, which is injected into `DeviceManager`.
 * Renamed application UART settings from the legacy `UART1_*` names to
-  `SIGNALTWIN_VSCP_UART_*` settings in `libraries/engine/src/config.hpp`.
+  `EDUBOX_HUB_PANEL_VSCP_UART_*` settings in `libraries/engine/src/config.hpp`.
 
 ### Firmware and emulator interoperability
 
@@ -63,7 +63,7 @@
 * Code using static `Protocol::*` methods must construct a transport and
   `vscp::Client`, then pass the client to `DeviceManager`.
 * Board integrations overriding `UART1_PORT`, `UART1_BAUDRATE`, `UART1_RX`, or
-  `UART1_TX` must migrate to the corresponding `SIGNALTWIN_VSCP_UART_*` names.
+  `UART1_TX` must migrate to the corresponding `EDUBOX_HUB_PANEL_VSCP_UART_*` names.
 * Serial Monitor and the emulator cannot normally open the same Windows COM
   port simultaneously; close Serial Monitor before starting the emulator.
 * Firmware size exceeds the default ESP32-S3 application partition. Use the
@@ -86,7 +86,7 @@
   * `set_point` is a write value sent by `CONTROL`.
   * `speed` is a config value sent by `CONFIG`.
 * Updated the emulator and pattern emulator so `H00.temp` gradually follows `set_point`; `speed` controls the update step.
-* Migrated VERSION to `config.hpp` as `SIGNALTWIN_FIRMWARE_VERSION`.
+* Migrated VERSION to `config.hpp` as `EDUBOX_HUB_PANEL_FIRMWARE_VERSION`.
 
 ### Developer tooling and diagnostics
 

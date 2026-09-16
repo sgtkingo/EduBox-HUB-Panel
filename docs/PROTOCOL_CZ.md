@@ -23,7 +23,7 @@ Výchozí parametry ve VSCP vrstvě:
 | Parametr | Hodnota |
 | --- | --- |
 | Baudrate | `115200` |
-| Port | `SIGNALTWIN_VSCP_UART_PORT`, aktuálně `0` |
+| Port | `EDUBOX_HUB_PANEL_VSCP_UART_PORT`, aktuálně `0` |
 | RX/TX | `-1`, výchozí pin mapping platformy |
 | Timeout INIT | `500 ms` |
 | Line ending | Každá zpráva je ukončená `\n` |

@@ -6,7 +6,7 @@ Run from anywhere inside the repository:
     python storage/sync_version.py
 
 The source of truth is the repository root VERSION file. This script mirrors
-that value into libraries/engine/src/config.hpp as SIGNALTWIN_FIRMWARE_VERSION.
+that value into libraries/engine/src/config.hpp as EDUBOX_HUB_PANEL_FIRMWARE_VERSION.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from pathlib import Path
 
 
 VERSION_DEFINE_PATTERN = re.compile(
-    r'(#define\s+SIGNALTWIN_FIRMWARE_VERSION\s+)".*?"'
+    r'(#define\s+EDUBOX_HUB_PANEL_FIRMWARE_VERSION\s+)".*?"'
 )
 
 
@@ -49,7 +49,7 @@ def sync_version(dry_run: bool = False) -> int:
     config_text = config_path.read_text(encoding="utf-8")
 
     if not VERSION_DEFINE_PATTERN.search(config_text):
-        raise ValueError("SIGNALTWIN_FIRMWARE_VERSION define not found in config.hpp.")
+        raise ValueError("EDUBOX_HUB_PANEL_FIRMWARE_VERSION define not found in config.hpp.")
 
     updated_text = VERSION_DEFINE_PATTERN.sub(
         rf'\1"{version}"',

@@ -148,7 +148,7 @@ bool AppConfigManager::load(AppConfig &config, std::string &error)
                     "AppConfigManager::load",
                     "storage read",
                     "firmwareVersion=%s defaultCommunication=%s theme=%s language=%s",
-                    SIGNALTWIN_FIRMWARE_VERSION,
+                    EDUBOX_HUB_PANEL_FIRMWARE_VERSION,
                     toString(config.defaultCommunication),
                     toString(config.theme),
                     toString(config.language));
@@ -196,7 +196,7 @@ bool AppConfigManager::save(const AppConfig &config, std::string &error)
                     "storage write",
                     "path=%s firmwareVersion=%s defaultCommunication=%s theme=%s language=%s",
                     STORAGE_APP_CONFIG_PATH,
-                    SIGNALTWIN_FIRMWARE_VERSION,
+                    EDUBOX_HUB_PANEL_FIRMWARE_VERSION,
                     toString(config.defaultCommunication),
                     toString(config.theme),
                     toString(config.language));

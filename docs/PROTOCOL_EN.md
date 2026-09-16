@@ -23,7 +23,7 @@ Default parameters in the VSCP layer:
 | Parameter | Value |
 | --- | --- |
 | Baudrate | `115200` |
-| Port | `SIGNALTWIN_VSCP_UART_PORT`, currently `0` |
+| Port | `EDUBOX_HUB_PANEL_VSCP_UART_PORT`, currently `0` |
 | RX/TX | `-1`, platform default pin mapping |
 | INIT timeout | `500 ms` |
 | Line ending | Each message is terminated by `\n` |

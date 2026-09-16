@@ -40,20 +40,20 @@
 #endif
 
 // Application-owned UART wiring for the injected VSCP transport.
-#ifndef SIGNALTWIN_VSCP_UART_PORT
-#define SIGNALTWIN_VSCP_UART_PORT 0
+#ifndef EDUBOX_HUB_PANEL_VSCP_UART_PORT
+#define EDUBOX_HUB_PANEL_VSCP_UART_PORT 0
 #endif
 
-#ifndef SIGNALTWIN_VSCP_UART_BAUDRATE
-#define SIGNALTWIN_VSCP_UART_BAUDRATE 115200
+#ifndef EDUBOX_HUB_PANEL_VSCP_UART_BAUDRATE
+#define EDUBOX_HUB_PANEL_VSCP_UART_BAUDRATE 115200
 #endif
 
-#ifndef SIGNALTWIN_VSCP_UART_RX
-#define SIGNALTWIN_VSCP_UART_RX -1
+#ifndef EDUBOX_HUB_PANEL_VSCP_UART_RX
+#define EDUBOX_HUB_PANEL_VSCP_UART_RX -1
 #endif
 
-#ifndef SIGNALTWIN_VSCP_UART_TX
-#define SIGNALTWIN_VSCP_UART_TX -1
+#ifndef EDUBOX_HUB_PANEL_VSCP_UART_TX
+#define EDUBOX_HUB_PANEL_VSCP_UART_TX -1
 #endif
 
 #ifndef CASE_SENSITIVE
@@ -61,8 +61,8 @@
 #endif
 
 // Firmware version mirrored from the root VERSION file by storage/sync_version.py.
-#ifndef SIGNALTWIN_FIRMWARE_VERSION
-#define SIGNALTWIN_FIRMWARE_VERSION "1.2.1.1"
+#ifndef EDUBOX_HUB_PANEL_FIRMWARE_VERSION
+#define EDUBOX_HUB_PANEL_FIRMWARE_VERSION "1.2.1.1"
 #endif
 
 // Storage backend selection for all persistent data access.

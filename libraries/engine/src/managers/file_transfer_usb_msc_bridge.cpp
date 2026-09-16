@@ -13,16 +13,16 @@
 #include <SPI.h>
 #include <USB.h>
 #include <USBMSC.h>
-#define SIGNALTWIN_HAS_USB_MSC_BACKEND 1
+#define EDUBOX_HUB_PANEL_HAS_USB_MSC_BACKEND 1
 #else
-#define SIGNALTWIN_HAS_USB_MSC_BACKEND 0
+#define EDUBOX_HUB_PANEL_HAS_USB_MSC_BACKEND 0
 #endif
 
 namespace
 {
 constexpr uint16_t MSC_BLOCK_SIZE = 512;
 
-#if SIGNALTWIN_HAS_USB_MSC_BACKEND
+#if EDUBOX_HUB_PANEL_HAS_USB_MSC_BACKEND
 USBMSC usbMsc;
 
 bool sdMountedForMsc = false;
@@ -147,7 +147,7 @@ FileTransferUsbMscBridge &fileTransferUsbMscBridge()
 
 bool FileTransferUsbMscBridge::isSupported() const
 {
-#if SIGNALTWIN_HAS_USB_MSC_BACKEND
+#if EDUBOX_HUB_PANEL_HAS_USB_MSC_BACKEND
     return true;
 #else
     return false;
@@ -160,7 +160,7 @@ bool FileTransferUsbMscBridge::start(std::string &error)
         return true;
     }
 
-#if !SIGNALTWIN_HAS_USB_MSC_BACKEND
+#if !EDUBOX_HUB_PANEL_HAS_USB_MSC_BACKEND
     error = "USB MSC bridge backend is not available. Enable ESP32-S3 native USB OTG/TinyUSB mode and USBMSC support.";
     return false;
 #else
@@ -213,13 +213,13 @@ bool FileTransferUsbMscBridge::start(std::string &error)
 bool FileTransferUsbMscBridge::stop(std::string &error)
 {
     if (!active) {
-#if SIGNALTWIN_HAS_USB_MSC_BACKEND
+#if EDUBOX_HUB_PANEL_HAS_USB_MSC_BACKEND
         unmountSdForMsc();
 #endif
         return true;
     }
 
-#if !SIGNALTWIN_HAS_USB_MSC_BACKEND
+#if !EDUBOX_HUB_PANEL_HAS_USB_MSC_BACKEND
     active = false;
     return true;
 #else

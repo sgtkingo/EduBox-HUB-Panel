@@ -150,7 +150,7 @@ void my_touchpad_read (lv_indev_drv_t * indev_driver, lv_indev_data_t * data)
 
 DeviceCatalog deviceCatalog; // Shared device catalog initialized from JSON DB on boot
 DeviceBrowserState deviceBrowserState(deviceCatalog); // Shared browse/highlight state for catalog screens
-HardwareSerial vscpSerial(SIGNALTWIN_VSCP_UART_PORT); // Physical UART owned and configured by the application
+HardwareSerial vscpSerial(EDUBOX_HUB_PANEL_VSCP_UART_PORT); // Physical UART owned and configured by the application
 vscp::StreamTransport vscpTransport(vscpSerial); // Transport only frames lines; it does not own the UART
 vscp::Client vscpClient(vscpTransport); // Shared VSCP protocol client
 DeviceManager deviceManager(deviceCatalog, vscpClient);  // Runtime device manager over the shared catalog
@@ -172,10 +172,10 @@ void setup ()
 
     // The application owns transport setup; VSCP remains independent of board wiring.
     vscpSerial.begin(
-        SIGNALTWIN_VSCP_UART_BAUDRATE,
+        EDUBOX_HUB_PANEL_VSCP_UART_BAUDRATE,
         SERIAL_8N1,
-        SIGNALTWIN_VSCP_UART_RX,
-        SIGNALTWIN_VSCP_UART_TX);
+        EDUBOX_HUB_PANEL_VSCP_UART_RX,
+        EDUBOX_HUB_PANEL_VSCP_UART_TX);
 
     //Init Display
     lcd.begin();

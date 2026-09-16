@@ -30,7 +30,7 @@ GuiManager::GuiManager(DeviceCatalog &catalog, DeviceBrowserState &browserState,
       currentState(GuiState::NONE),
       initialized(false)
 {
-    appVersion = SIGNALTWIN_FIRMWARE_VERSION;
+    appVersion = EDUBOX_HUB_PANEL_FIRMWARE_VERSION;
 }
 
 bool GuiManager::init(std::string configFile)
