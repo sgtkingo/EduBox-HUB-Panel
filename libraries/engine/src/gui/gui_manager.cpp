@@ -13,10 +13,6 @@
 
 const int FPS = 60;
 const int CYCLE_DRAW_MS = (1000 / FPS);
-const int CYCLE_SYNC_MS = 100;
-
-const int LOOP_SYNC_TH = CYCLE_SYNC_MS / CYCLE_DRAW_MS;
-int LOOP_SYNC_COUNTER = LOOP_SYNC_TH;
 
 GuiManager::GuiManager(DeviceCatalog &catalog, DeviceBrowserState &browserState, DeviceManager &manager, DeviceVisualizationSession &visualizationSession, DataBundleManager &dataBundleManager)
     : deviceCatalog(catalog),
@@ -423,28 +419,42 @@ bool GuiManager::saveAppSettings(DefaultCommunicationMode defaultCommunication,
     }
 }
 
+void GuiManager::setVisualizationUpdatePeriodMs(uint32_t periodMs)
+{
+    visualizationPollSchedule.setPeriod(periodMs, lv_tick_get());
+    debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "GuiManager::setVisualizationUpdatePeriodMs", "update period changed", "periodMs=%u",
+                    static_cast<unsigned>(visualizationPollSchedule.periodMs()));
+}
+
 void GuiManager::redraw()
 {
     lv_timer_handler();
-    delay_ms(CYCLE_DRAW_MS);
 
     if (!initialized) {
+        delay_ms(1);
         return;
     }
 
-    if (LOOP_SYNC_COUNTER-- < 0) {
-        deviceManager.resync(visualizationSession.getCurrentDevice());
-        LOOP_SYNC_COUNTER = LOOP_SYNC_TH;
-        delay_ms(1);
+    const uint32_t now = lv_tick_get();
+    if (currentState == GuiState::VISUALIZATION && deviceManager.isRunning()) {
+        if (visualizationPollSchedule.due(now)) {
+            deviceManager.resync(visualizationSession.getCurrentDevice());
+        }
+    } else {
+        visualizationPollSchedule.reset(now);
     }
 
     switch (currentState) {
     case GuiState::VISUALIZATION:
-        if (screenRegistry.getVisualizationGui().isInitialized()) {
+        if (screenRegistry.getVisualizationGui().isInitialized() &&
+            static_cast<uint32_t>(now - lastVisualizationDrawMs) >= CYCLE_DRAW_MS) {
+            lastVisualizationDrawMs = now;
             screenRegistry.getVisualizationGui().drawCurrentDevice();
         }
         break;
     default:
         break;
     }
+    // Yield to the RTOS without imposing the display frame period on polling.
+    delay_ms(1);
 }

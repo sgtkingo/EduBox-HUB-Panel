@@ -2,6 +2,7 @@
 #define GUI_ROUTER_HPP
 
 #include <string>
+#include <cstdint>
 
 #include "app_settings.hpp"
 #include "../devices/json_device_builder.hpp"
@@ -51,6 +52,8 @@ public:
     virtual LanguageMode getLanguageMode() const = 0;
     virtual void setLanguageMode(LanguageMode mode) = 0;
     virtual std::string getAppVersion() const = 0;
+    virtual uint32_t getVisualizationUpdatePeriodMs() const = 0;
+    virtual void setVisualizationUpdatePeriodMs(uint32_t periodMs) = 0;
     virtual std::string getCatalogApplication() const = 0;
     virtual std::string getCatalogVersion() const = 0;
 };

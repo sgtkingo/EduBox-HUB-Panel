@@ -119,6 +119,7 @@ Firmupdater automatically checks for newer versions and applies updates **with m
 
 ## Current UI and Storage Notes
 
+- Visualization **Settings > Update period** adjusts live polling from **10 to 1000 ms**, with a **100 ms** default. Changes apply immediately and remain selected while navigating between devices/screens until reboot. Device response time and rendering load can make the actual interval longer.
 - Runtime and DataBundle graphs support two visible signals with separate Y axes, autoscale labels, cursor readout and adjustable visible sample count.
 - Tiny and very large float ranges are shown with compact axis scaling labels, so micro-scale and high-value signals stay readable.
 - Transfer Mode exposes SD-card data through the USB transfer workflow. After closing an active transfer session, the HMI can prompt for restart so changed files are reloaded cleanly.

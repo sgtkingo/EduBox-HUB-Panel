@@ -1,4 +1,5 @@
 #include "signals_settings_panel.hpp"
+#include "visualization_poll_schedule.hpp"
 
 #include <algorithm>
 #include <cstdint>
@@ -19,11 +20,13 @@ void SignalsSettingsPanel::show(lv_obj_t *parentWidget,
                                 void *userData,
                                 uint32_t bundleAmount,
                                 bool isBundleFull,
+                                uint32_t updatePeriodMs,
                                 const std::vector<std::string> &chartValueKeys,
                                 const std::vector<std::string> &selectedChartValueKeys,
                                 lv_event_cb_t closeCallback,
                                 lv_event_cb_t showBundlesCallback,
-                                lv_event_cb_t chartValueCallback)
+                                lv_event_cb_t chartValueCallback,
+                                lv_event_cb_t updatePeriodCallback)
 {
     if (!parentWidget || isVisible()) {
         return;
@@ -40,7 +43,7 @@ void SignalsSettingsPanel::show(lv_obj_t *parentWidget,
     ui_SettingsBridgeGroup = lv_obj_create(parentWidget);
     lv_obj_remove_style_all(ui_SettingsBridgeGroup);
     lv_obj_set_width(ui_SettingsBridgeGroup, 250);
-    lv_obj_set_height(ui_SettingsBridgeGroup, 315);
+    lv_obj_set_height(ui_SettingsBridgeGroup, 379);
     lv_obj_set_x(ui_SettingsBridgeGroup, -7);
     lv_obj_set_y(ui_SettingsBridgeGroup, 25);
     lv_obj_set_align(ui_SettingsBridgeGroup, LV_ALIGN_TOP_RIGHT);
@@ -73,7 +76,7 @@ void SignalsSettingsPanel::show(lv_obj_t *parentWidget,
     ui_SettingsGroup = lv_obj_create(ui_SettingsOverlay);
     lv_obj_remove_style_all(ui_SettingsGroup);
     lv_obj_set_width(ui_SettingsGroup, 250);
-    lv_obj_set_height(ui_SettingsGroup, 315);
+    lv_obj_set_height(ui_SettingsGroup, 379);
     lv_obj_set_x(ui_SettingsGroup, -7);
     lv_obj_set_y(ui_SettingsGroup, 25);
     lv_obj_set_align(ui_SettingsGroup, LV_ALIGN_TOP_RIGHT);
@@ -83,7 +86,7 @@ void SignalsSettingsPanel::show(lv_obj_t *parentWidget,
     ui_SettingsOutlay = lv_obj_create(ui_SettingsGroup);
     lv_obj_remove_style_all(ui_SettingsOutlay);
     lv_obj_set_width(ui_SettingsOutlay, 250);
-    lv_obj_set_height(ui_SettingsOutlay, 290);
+    lv_obj_set_height(ui_SettingsOutlay, 354);
     lv_obj_set_align(ui_SettingsOutlay, LV_ALIGN_BOTTOM_MID);
     lv_obj_clear_flag(ui_SettingsOutlay, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_style_radius(ui_SettingsOutlay, 10, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -214,11 +217,40 @@ void SignalsSettingsPanel::show(lv_obj_t *parentWidget,
     lv_obj_set_align(ui_SettingsManualScaleButtonLabel, LV_ALIGN_CENTER);
     lv_label_set_text(ui_SettingsManualScaleButtonLabel, "Manual Scale");
 
+    ui_SettingsUpdatePeriodLabel = lv_label_create(ui_SettingsGroup);
+    lv_obj_set_pos(ui_SettingsUpdatePeriodLabel, 10, 242);
+    lv_obj_set_style_text_color(ui_SettingsUpdatePeriodLabel, lv_color_hex(0x000000), 0);
+    lv_obj_set_style_text_font(ui_SettingsUpdatePeriodLabel, &lv_font_montserrat_14, 0);
+    lv_label_set_text_fmt(ui_SettingsUpdatePeriodLabel, "Update period: %u ms", static_cast<unsigned>(updatePeriodMs));
+
+    ui_SettingsUpdatePeriodSlider = lv_slider_create(ui_SettingsGroup);
+    lv_obj_set_size(ui_SettingsUpdatePeriodSlider, 200, 12);
+    lv_obj_set_pos(ui_SettingsUpdatePeriodSlider, 25, 272);
+    lv_slider_set_range(ui_SettingsUpdatePeriodSlider,
+                        VisualizationPollSchedule::MIN_PERIOD_MS,
+                        VisualizationPollSchedule::MAX_PERIOD_MS);
+    lv_slider_set_value(ui_SettingsUpdatePeriodSlider, updatePeriodMs, LV_ANIM_OFF);
+    lv_obj_add_event_cb(ui_SettingsUpdatePeriodSlider, [](lv_event_t *e) {
+        auto *self = static_cast<SignalsSettingsPanel *>(lv_event_get_user_data(e));
+        const int value = lv_slider_get_value(lv_event_get_target(e));
+        lv_label_set_text_fmt(self->ui_SettingsUpdatePeriodLabel, "Update period: %d ms", value);
+    }, LV_EVENT_VALUE_CHANGED, this);
+    lv_obj_add_event_cb(ui_SettingsUpdatePeriodSlider, updatePeriodCallback, LV_EVENT_VALUE_CHANGED, userData);
+
+    lv_obj_t *minimum = lv_label_create(ui_SettingsGroup);
+    lv_obj_set_pos(minimum, 17, 288);
+    lv_obj_set_style_text_font(minimum, &lv_font_montserrat_10, 0);
+    lv_label_set_text(minimum, "10 ms");
+    lv_obj_t *maximum = lv_label_create(ui_SettingsGroup);
+    lv_obj_set_pos(maximum, 190, 288);
+    lv_obj_set_style_text_font(maximum, &lv_font_montserrat_10, 0);
+    lv_label_set_text(maximum, "1000 ms");
+
     ui_SettingsDataBundleLabel = lv_label_create(ui_SettingsGroup);
     lv_obj_set_width(ui_SettingsDataBundleLabel, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_SettingsDataBundleLabel, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_SettingsDataBundleLabel, 10);
-    lv_obj_set_y(ui_SettingsDataBundleLabel, 242);
+    lv_obj_set_y(ui_SettingsDataBundleLabel, 306);
     lv_label_set_text(ui_SettingsDataBundleLabel, "Data Bundles:");
     lv_obj_set_style_text_color(ui_SettingsDataBundleLabel, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
 
@@ -226,7 +258,7 @@ void SignalsSettingsPanel::show(lv_obj_t *parentWidget,
     lv_obj_set_width(ui_SettingsDataBundleCountLabel, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_SettingsDataBundleCountLabel, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_SettingsDataBundleCountLabel, -20);
-    lv_obj_set_y(ui_SettingsDataBundleCountLabel, 242);
+    lv_obj_set_y(ui_SettingsDataBundleCountLabel, 306);
     lv_obj_set_align(ui_SettingsDataBundleCountLabel, LV_ALIGN_TOP_RIGHT);
     const std::string bundleCountText = "[" + std::to_string(bundleAmount) + "/30]";
     lv_label_set_text(ui_SettingsDataBundleCountLabel, bundleCountText.c_str());
@@ -239,7 +271,7 @@ void SignalsSettingsPanel::show(lv_obj_t *parentWidget,
     lv_obj_set_width(ui_SettingsDataBundleShowButton, 200);
     lv_obj_set_height(ui_SettingsDataBundleShowButton, 20);
     lv_obj_set_x(ui_SettingsDataBundleShowButton, 17);
-    lv_obj_set_y(ui_SettingsDataBundleShowButton, 266);
+    lv_obj_set_y(ui_SettingsDataBundleShowButton, 330);
     lv_obj_add_flag(ui_SettingsDataBundleShowButton, LV_OBJ_FLAG_SCROLL_ON_FOCUS);
     lv_obj_clear_flag(ui_SettingsDataBundleShowButton, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_style_radius(ui_SettingsDataBundleShowButton, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -301,6 +333,8 @@ void SignalsSettingsPanel::hide()
     ui_SettingsGraphValuesLabel = nullptr;
     ui_SettingsManualScaleButton = nullptr;
     ui_SettingsManualScaleButtonLabel = nullptr;
+    ui_SettingsUpdatePeriodLabel = nullptr;
+    ui_SettingsUpdatePeriodSlider = nullptr;
     ui_SettingsDataBundleLabel = nullptr;
     ui_SettingsDataBundleCountLabel = nullptr;
     ui_SettingsDataBundleShowButton = nullptr;

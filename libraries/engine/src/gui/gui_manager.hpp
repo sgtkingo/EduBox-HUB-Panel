@@ -17,6 +17,7 @@
 #include "gui_runtime_policy.hpp"
 #include "gui_screen_registry.hpp"
 #include "gui_state.hpp"
+#include "visualization_poll_schedule.hpp"
 
 class GuiManager : public GuiRouter
 {
@@ -33,6 +34,8 @@ private:
     std::string appVersion;                            ///< Firmware version embedded in the build
     GuiState currentState;
     bool initialized;
+    VisualizationPollSchedule visualizationPollSchedule;
+    uint32_t lastVisualizationDrawMs = 0;
 
     void hideAllComponents();
     void applyRuntimePolicy(GuiState targetState);
@@ -94,6 +97,8 @@ public:
     LanguageMode getLanguageMode() const override { return navigationPolicy.getLanguageMode(); }
     void setLanguageMode(LanguageMode mode) override { navigationPolicy.setLanguageMode(mode); }
     std::string getAppVersion() const override { return appVersion; }
+    uint32_t getVisualizationUpdatePeriodMs() const override { return visualizationPollSchedule.periodMs(); }
+    void setVisualizationUpdatePeriodMs(uint32_t periodMs) override;
     std::string getCatalogApplication() const override { return deviceCatalog.getApplication(); }
     std::string getCatalogVersion() const override { return deviceCatalog.getVersion(); }
 

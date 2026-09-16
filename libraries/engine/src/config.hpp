@@ -30,7 +30,7 @@
 
 // Unified project debug logging switch. Exceptions are printed by their catch handlers.
 #ifndef ENABLE_DEBUG
-#define ENABLE_DEBUG 1
+#define ENABLE_DEBUG 0
 #endif
 
 // Debug verbosity:
@@ -61,13 +61,8 @@
 #endif
 
 // Firmware version mirrored from the root VERSION file by storage/sync_version.py.
-<<<<<<< HEAD
 #ifndef EDUBOX_HUB_PANEL_FIRMWARE_VERSION
-#define EDUBOX_HUB_PANEL_FIRMWARE_VERSION "1.2.1.1"
-=======
-#ifndef SIGNALTWIN_FIRMWARE_VERSION
-#define SIGNALTWIN_FIRMWARE_VERSION "1.2.1.2"
->>>>>>> db18962511d79353ac15852f95774e452213394e
+#define EDUBOX_HUB_PANEL_FIRMWARE_VERSION "1.2.1.2"
 #endif
 
 // Storage backend selection for all persistent data access.

@@ -1354,6 +1354,7 @@ void SignalsVisualizationGui::handleSettingsButtonClick(lv_obj_t *recordGroup, l
         this,
         dataBundleManager.getDataBundleAmount(),
         dataBundleManager.isBundleStorageFull(),
+        router.getVisualizationUpdatePeriodMs(),
         availableChartValueKeys,
         activeChartValueKeys,
         [](lv_event_t *e) {
@@ -1368,6 +1369,10 @@ void SignalsVisualizationGui::handleSettingsButtonClick(lv_obj_t *recordGroup, l
             auto *self = static_cast<SignalsVisualizationGui *>(lv_event_get_user_data(e));
             const int index = static_cast<int>(reinterpret_cast<intptr_t>(lv_obj_get_user_data(lv_event_get_current_target(e))));
             self->handleChartValueSelectionClick(static_cast<size_t>(index));
+        },
+        [](lv_event_t *e) {
+            auto *self = static_cast<SignalsVisualizationGui *>(lv_event_get_user_data(e));
+            self->router.setVisualizationUpdatePeriodMs(lv_slider_get_value(lv_event_get_target(e)));
         });
 }
 
