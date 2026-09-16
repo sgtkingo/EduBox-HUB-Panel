@@ -61,8 +61,13 @@
 #endif
 
 // Firmware version mirrored from the root VERSION file by storage/sync_version.py.
+<<<<<<< HEAD
 #ifndef EDUBOX_HUB_PANEL_FIRMWARE_VERSION
 #define EDUBOX_HUB_PANEL_FIRMWARE_VERSION "1.2.1.1"
+=======
+#ifndef SIGNALTWIN_FIRMWARE_VERSION
+#define SIGNALTWIN_FIRMWARE_VERSION "1.2.1.2"
+>>>>>>> db18962511d79353ac15852f95774e452213394e
 #endif
 
 // Storage backend selection for all persistent data access.
