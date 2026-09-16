@@ -15,6 +15,7 @@
 #include "lvgl.h"
 
 #include "gui_router.hpp"
+#include "images/ui_images.h"
 
 /**
  * @class CreditsGui
@@ -46,7 +47,8 @@ private:
     static constexpr const char *txt_title = "About EduBox HUB Panel";
 
     static constexpr const char *txt_intro =
-        "EduBox HUB Panel is an embedded HMI for VSCP device connection, live signal visualization, recording and DataBundle review.\n This project was developed as part of the EduBox HUB ecosystem under www.m-ta.cz (MTA).";
+        "EduBox HUB Panel is a touchscreen interface for VSCP devices. It visualizes live sensor data, records measurements and reviews DataBundles.\n"
+        "Developed as part of the EduBox HUB ecosystem by MTA (www.m-ta.cz).";
 
     static constexpr const char *txt_section_authors =
         "Authors:\n"
@@ -161,6 +163,13 @@ public:
 
         //Back Button Group
         create_corner_button();
+
+        // Product identity stays in About; the main menu keeps the MTA logo.
+        lv_obj_t *panelLogo = lv_img_create(ui_CreditsScreen);
+        lv_img_set_src(panelLogo, &ui_img_edubox_hub_panel_logo);
+        lv_obj_add_flag(panelLogo, LV_OBJ_FLAG_FLOATING);
+        lv_obj_align(panelLogo, LV_ALIGN_TOP_RIGHT, -18, 8);
+        lv_obj_clear_flag(panelLogo, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
 
         // Title
         lv_obj_t *lbl_title = create_static_label(txt_title);

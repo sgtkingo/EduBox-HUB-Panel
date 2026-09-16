@@ -1,5 +1,7 @@
 # EduBox HUB Panel
 
+![Logo EduBox HUB Panel](assets/logo.svg)
+
 [![Build Firmware](https://github.com/sgtkingo/EduBox-HUB-Panel/actions/workflows/build.yml/badge.svg)](https://github.com/sgtkingo/EduBox-HUB-Panel/actions/workflows/build.yml)
 [![Chip: ESP32-S3](https://img.shields.io/badge/chip-ESP32--S3-ef4444)](https://www.espressif.com/en/products/socs/esp32-s3)
 [![Platform: ESP32](https://img.shields.io/badge/platform-ESP32-0f766e)](https://docs.espressif.com/projects/arduino-esp32/en/latest/)
