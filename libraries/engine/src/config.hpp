@@ -62,7 +62,7 @@
 
 // Firmware version mirrored from the root VERSION file by storage/sync_version.py.
 #ifndef SIGNALTWIN_FIRMWARE_VERSION
-#define SIGNALTWIN_FIRMWARE_VERSION "1.2.1.0"
+#define SIGNALTWIN_FIRMWARE_VERSION "1.2.1.1"
 #endif
 
 // Storage backend selection for all persistent data access.
