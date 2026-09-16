@@ -150,7 +150,8 @@ void FileTransferGui::refresh()
         return;
     }
 
-    const bool sdPresent = transferService.isSdCardPresent();
+    // An unsupported USB backend needs no SD probe and its error must stay visible.
+    const bool sdPresent = state == FileTransferState::UNSUPPORTED || transferService.isSdCardPresent();
 
     lv_obj_add_state(ui_BackButton, LV_STATE_DISABLED);
     lv_obj_add_state(ui_StartButton, LV_STATE_DISABLED);
@@ -255,14 +256,8 @@ void FileTransferGui::handleStart()
     transferSessionAttempted = true;
     renderConnecting();
     lv_obj_invalidate(ui_Widget);
-    lv_timer_handler();
-    lv_refr_now(nullptr);
-
-    if (!transferService.isSdCardPresent()) {
-        refresh();
-        return;
-    }
-
+    // This runs inside LVGL's input timer. Leave rendering to the outer handler
+    // instead of adding a full synchronous redraw to the input callback stack.
     transferService.start();
     refresh();
 }

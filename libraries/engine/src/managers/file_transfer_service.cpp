@@ -41,6 +41,19 @@ bool FileTransferService::start()
 {
     try
     {
+        if (transferModeActive) {
+            return state == FileTransferState::READY;
+        }
+
+        // Reject incompatible USB configurations before touching the mounted SD
+        // filesystem or disabling logging. Hardware CDC cannot provide USB MSC.
+        if (!fileTransferUsbMscBridge().isSupported()) {
+            state = FileTransferState::UNSUPPORTED;
+            lastMessage = "USB MSC bridge backend is not available. Enable ESP32-S3 native USB OTG/TinyUSB mode and USBMSC support.";
+            debugLogMessage(DEBUG_VERBOSE_ERRORS, "FileTransferService::start", "transfer unsupported", "%s", lastMessage.c_str());
+            return false;
+        }
+
         if (!isSdCardPresent())
         {
             state = FileTransferState::MISSING_SD;

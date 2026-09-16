@@ -7,6 +7,10 @@
 
 #include "expt.hpp"
 
+#ifdef USE_LVGL
+#include "lvgl.h"
+#endif
+
 #include <algorithm>
 
 namespace
@@ -180,6 +184,11 @@ bool StorageManager::enterTransferLock()
     }
 
     debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "StorageManager::enterTransferLock", "transfer lock", "unmounting SD for USB transfer");
+#ifdef USE_LVGL
+    // Image decoders can keep File handles cached even for hidden screens.
+    // Close them while FATFS is still mounted, before SD.end() frees it.
+    lv_img_cache_invalidate_src(nullptr);
+#endif
     SD.end();
     available = false;
     transferLocked = true;
