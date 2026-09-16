@@ -172,8 +172,8 @@ class TAMC_GT911 {
     // void (*onRead)();
     void writeByteData(uint16_t reg, uint8_t val);
     uint8_t readByteData(uint16_t reg);
-    void writeBlockData(uint16_t reg, uint8_t *val, uint8_t size);
-    void readBlockData(uint8_t *buf, uint16_t reg, uint8_t size);
+    bool writeBlockData(uint16_t reg, uint8_t *val, uint8_t size);
+    bool readBlockData(uint8_t *buf, uint16_t reg, uint8_t size);
     uint8_t rotation = ROTATION_NORMAL;
     uint8_t addr;
     uint8_t pinSda;

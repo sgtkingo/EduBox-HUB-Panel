@@ -103,8 +103,7 @@ static lv_color_t buf [screenWidth * screenHeight / LVGL_BUFFER_RATIO];
 /* Serial debugging */
 void my_print (const char * buf)
 {
-    Serial.printf( buf );
-    Serial.flush();
+    logMessage("%s", buf);
 }
 #endif
 
@@ -184,6 +183,9 @@ void setup ()
     delay( 200 );
 
     lv_init();
+#if LV_USE_LOG
+    lv_log_register_print_cb(my_print);
+#endif
     lv_extra_init();
 
     delay( 100 );

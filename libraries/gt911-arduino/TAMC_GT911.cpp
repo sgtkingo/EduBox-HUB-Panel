@@ -27,12 +27,13 @@ void TAMC_GT911::reset() {
   pinMode(pinInt, INPUT);
   // attachInterrupt(pinInt, TAMC_GT911::onInterrupt, RISING);
   delay(50);
-  readBlockData(configBuf, GT911_CONFIG_START, GT911_CONFIG_SIZE);
-  setResolution(width, height);
+  if (readBlockData(configBuf, GT911_CONFIG_START, GT911_CONFIG_SIZE)) {
+    setResolution(width, height);
+  }
 }
 void TAMC_GT911::calculateChecksum() {
-  uint8_t checksum;
-  for (uint8_t i=0; i<GT911_CONFIG_SIZE; i++) {
+  uint8_t checksum = 0;
+  for (uint8_t i=0; i<GT911_CONFIG_CHKSUM - GT911_CONFIG_START; i++) {
     checksum += configBuf[i];
   }
   checksum = (~checksum) + 1;
@@ -44,13 +45,16 @@ void TAMC_GT911::calculateChecksum() {
 // }
 void TAMC_GT911::reflashConfig() {
   calculateChecksum();
-  writeByteData(GT911_CONFIG_CHKSUM, configBuf[GT911_CONFIG_CHKSUM-GT911_CONFIG_START]);
-  writeByteData(GT911_CONFIG_FRESH, 1);
+  if (writeBlockData(GT911_CONFIG_START, configBuf, GT911_CONFIG_SIZE)) {
+    writeByteData(GT911_CONFIG_FRESH, 1);
+  }
 }
 void TAMC_GT911::setRotation(uint8_t rot) {
   rotation = rot;
 }
 void TAMC_GT911::setResolution(uint16_t _width, uint16_t _height) {
+  width = _width;
+  height = _height;
   configBuf[GT911_X_OUTPUT_MAX_LOW - GT911_CONFIG_START] = lowByte(_width);
   configBuf[GT911_X_OUTPUT_MAX_HIGH - GT911_CONFIG_START] = highByte(_width);
   configBuf[GT911_Y_OUTPUT_MAX_LOW - GT911_CONFIG_START] = lowByte(_height);
@@ -61,29 +65,42 @@ void TAMC_GT911::setResolution(uint16_t _width, uint16_t _height) {
 //   onRead = isr;
 // }
 void TAMC_GT911::read(void) {
-  // Serial.println("TAMC_GT911::read");
-  uint8_t data[7];
-  uint8_t id;
-  uint16_t x, y, size;
-
-  uint8_t pointInfo = readByteData(GT911_POINT_INFO);
-  uint8_t bufferStatus = pointInfo >> 7 & 1;
-  uint8_t proximityValid = pointInfo >> 5 & 1;
-  uint8_t haveKey = pointInfo >> 4 & 1;
-  isLargeDetect = pointInfo >> 6 & 1;
-  touches = pointInfo & 0xF;
-  // Serial.print("bufferStatus: ");Serial.println(bufferStatus);
-  // Serial.print("largeDetect: ");Serial.println(isLargeDetect);
-  // Serial.print("proximityValid: ");Serial.println(proximityValid);
-  // Serial.print("haveKey: ");Serial.println(haveKey);
-  // Serial.print("touches: ");Serial.println(touches);
-  isTouched = touches > 0;
-  if (bufferStatus == 1 && isTouched) {
-    for (uint8_t i=0; i<touches; i++) {
-      readBlockData(data, GT911_POINT_1 + i * 8, 7);
-      points[i] = readPoint(data);
-    }
+  uint8_t pointInfo = 0;
+  if (!readBlockData(&pointInfo, GT911_POINT_INFO, 1)) {
+    touches = 0;
+    isTouched = false;
+    return;
   }
+  // No new frame: preserve the last complete sample and do not acknowledge it.
+  if (!(pointInfo & 0x80)) {
+    return;
+  }
+  isLargeDetect = (pointInfo >> 6) & 1;
+  const uint8_t count = pointInfo & 0x0F;
+  touches = 0;
+  isTouched = false;
+  if (count > sizeof(points) / sizeof(points[0])) {
+    writeByteData(GT911_POINT_INFO, 0);
+    return;
+  }
+  TP_Point sample[5];
+  for (uint8_t i = 0; i < count; ++i) {
+    uint8_t data[7] = {};
+    if (!readBlockData(data, GT911_POINT_1 + i * 8, sizeof(data))) {
+      writeByteData(GT911_POINT_INFO, 0);
+      return;
+    }
+    const uint16_t rawX = data[1] | (data[2] << 8);
+    const uint16_t rawY = data[3] | (data[4] << 8);
+    if (rawX > width || rawY > height) {
+      writeByteData(GT911_POINT_INFO, 0);
+      return;
+    }
+    sample[i] = readPoint(data);
+  }
+  for (uint8_t i = 0; i < count; ++i) points[i] = sample[i];
+  touches = count;
+  isTouched = count > 0;
   writeByteData(GT911_POINT_INFO, 0);
 }
 TP_Point TAMC_GT911::readPoint(uint8_t *data) {
@@ -133,25 +150,39 @@ uint8_t TAMC_GT911::readByteData(uint16_t reg) {
   x = Wire.read();
   return x;
 }
-void TAMC_GT911::writeBlockData(uint16_t reg, uint8_t *val, uint8_t size) {
-  Wire.beginTransmission(addr);
-  Wire.write(highByte(reg));
-  Wire.write(lowByte(reg));
-  // Wire.write(val, size);
-  for (uint8_t i=0; i<size; i++) {
-    Wire.write(val[i]);
+bool TAMC_GT911::writeBlockData(uint16_t reg, uint8_t *val, uint8_t size) {
+  // Configuration is larger than Wire's buffer on several supported platforms.
+  for (uint16_t offset = 0; offset < size;) {
+    const uint8_t chunk = size - offset > 32 ? 32 : size - offset;
+    Wire.beginTransmission(addr);
+    Wire.write(highByte(reg + offset));
+    Wire.write(lowByte(reg + offset));
+    for (uint8_t i = 0; i < chunk; ++i) {
+      if (Wire.write(val[offset + i]) != 1) return false;
+    }
+    if (Wire.endTransmission() != 0) return false;
+    offset += chunk;
   }
-  Wire.endTransmission();
+  return true;
 }
-void TAMC_GT911::readBlockData(uint8_t *buf, uint16_t reg, uint8_t size) {
-  Wire.beginTransmission(addr);
-  Wire.write(highByte(reg));
-  Wire.write(lowByte(reg));
-  Wire.endTransmission();
-  Wire.requestFrom(addr, size);
-  for (uint8_t i=0; i<size; i++) {
-    buf[i] = Wire.read();
+bool TAMC_GT911::readBlockData(uint8_t *buf, uint16_t reg, uint8_t size) {
+  for (uint16_t offset = 0; offset < size;) {
+    const uint8_t chunk = size - offset > 32 ? 32 : size - offset;
+    Wire.beginTransmission(addr);
+    Wire.write(highByte(reg + offset));
+    Wire.write(lowByte(reg + offset));
+    if (Wire.endTransmission() != 0) return false;
+    if (Wire.requestFrom(addr, chunk) != chunk) {
+      while (Wire.available()) Wire.read();
+      return false;
+    }
+    for (uint8_t i = 0; i < chunk; ++i) {
+      if (!Wire.available()) return false;
+      buf[offset + i] = Wire.read();
+    }
+    offset += chunk;
   }
+  return true;
 }
 TP_Point::TP_Point(void) {
   id = x = y = size = 0;

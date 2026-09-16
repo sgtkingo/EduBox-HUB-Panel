@@ -13,6 +13,10 @@
 
 #include <algorithm>
 
+#if defined(ARDUINO_ARCH_ESP32)
+#include <esp_heap_caps.h>
+#endif
+
 namespace
 {
 std::string normalizeDirectoryPath(std::string path)
@@ -229,6 +233,14 @@ bool StorageManager::exists(const std::string &path) const
     }
 
     const std::string absolutePath = ensureAbsolutePath(path);
+#if defined(ARDUINO_ARCH_ESP32)
+    // Do not walk TLSF pools here: largest-block/info queries hold the heap lock
+    // with interrupts disabled and the diagnostic itself can trip the IWDT.
+    debugLogMessage("StorageManager::exists", "storage probe", "path=%s internalFree=%u psramFree=%u",
+                    absolutePath.c_str(),
+                    static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)),
+                    static_cast<unsigned>(heap_caps_get_free_size(MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)));
+#endif
     const bool result = activeFilesystem->exists(absolutePath.c_str());
     debugLogMessage("StorageManager::exists", "storage read", "path=%s exists=%d", absolutePath.c_str(), result);
     return result;

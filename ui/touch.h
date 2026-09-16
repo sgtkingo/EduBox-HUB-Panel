@@ -181,6 +181,18 @@ bool touch_touched()
       touch_second_y = map(ts.points[1].y, TOUCH_MAP_Y1, TOUCH_MAP_Y2, 0, lcd.height() - 1);
     }
 #endif
+    // Reject invalid mapped samples before LVGL and pinch handling see them.
+    if (touch_point_count < 1 || touch_point_count > 5 ||
+        touch_last_x < 0 || touch_last_x >= lcd.width() ||
+        touch_last_y < 0 || touch_last_y >= lcd.height()) {
+      touch_point_count = 0;
+      return false;
+    }
+    if (touch_point_count > 1 &&
+        (touch_second_x < 0 || touch_second_x >= lcd.width() ||
+         touch_second_y < 0 || touch_second_y >= lcd.height())) {
+      touch_point_count = 1;
+    }
     return true;
   }
   else

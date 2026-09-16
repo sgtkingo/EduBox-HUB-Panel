@@ -61,6 +61,7 @@ lv_img_dsc_t *buildFilePreview(const void *src, lv_coord_t targetWidth, lv_coord
     }
 
     lv_img_decoder_dsc_t decoder;
+    debugLogMessage("DeviceCatalogBrowserRenderer::buildFilePreview", "picture decode start", "path=%s", static_cast<const char *>(src));
     lv_memset_00(&decoder, sizeof(decoder));
     if (lv_img_decoder_open(&decoder, src, lv_color_black(), 0) != LV_RES_OK ||
         !decoder.img_data ||
@@ -630,7 +631,7 @@ void DeviceCatalogBrowserRenderer::applyImagePreview(lv_obj_t *frame,
         }
         lv_obj_add_flag(canvas, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(image, LV_OBJ_FLAG_HIDDEN);
-        lv_img_set_src(image, src);
+        lv_img_set_src(image, &ui_img_placeholder_sensor);
         centerImage(image);
         return;
     }
