@@ -89,7 +89,7 @@ void DeviceManager::applyAssignedPinsToDevices() const
     }
 }
 
-void DeviceManager::disconnectAssignedDevices(const std::vector<BaseDevice *> &devices) const
+void DeviceManager::disconnectAssignedDevices(const std::vector<BaseDevice *> &devices)
 {
     for (BaseDevice *device : devices) {
         disconnectDevice(device, protocolClient);
@@ -288,24 +288,7 @@ bool DeviceManager::connectAssignedDevice(BaseDevice *device)
         return false;
     }
 
-    const std::map<std::string, std::string> pinAssignments = device->getPinAssignments();
     debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "DeviceManager::connectAssignedDevice", "protocol connect", "device=%s pins=%s", device->UID.c_str(), device->getPins().c_str());
-    if (!disconnectDevice(device, protocolClient)) {
-        debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "DeviceManager::connectAssignedDevice", "protocol disconnect skipped", "device=%s error=%s", device->UID.c_str(), device->getError().c_str());
-    }
-
-    if (pinAssignments.empty()) {
-        for (const auto &virtualPin : PinMap) {
-            if (virtualPin.assignedDevice == device) {
-                device->assignPin(std::to_string(virtualPin.pinNumber));
-            }
-        }
-    } else {
-        for (const auto &pinAssignment : pinAssignments) {
-            device->assignPin(pinAssignment.first, pinAssignment.second);
-        }
-    }
-
     const bool connected = connectDevice(device, protocolClient);
     device->setPinConnectionActive(connected);
     debugLogMessage(connected ? DEBUG_VERBOSE_IMPORTANT : DEBUG_VERBOSE_ERRORS, "DeviceManager::connectAssignedDevice", connected ? "protocol connect" : "protocol connect failed", "device=%s connected=%d", device->UID.c_str(), connected);
@@ -476,4 +459,14 @@ std::vector<BaseDevice *> DeviceManager::getIncompleteAssignedDevices() const
         }
     }
     return incompleteDevices;
+}
+
+bool DeviceManager::reconnectDevice(BaseDevice *device)
+{
+    if (!device) return false;
+    protocolClient.invalidateInitialization();
+    if (!ensureProtocolInitialized()) return false;
+    const bool connected = connectDevice(device, protocolClient);
+    device->setPinConnectionActive(connected);
+    return connected;
 }

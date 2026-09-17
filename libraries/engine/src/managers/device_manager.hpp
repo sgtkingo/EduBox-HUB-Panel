@@ -50,7 +50,7 @@ enum class ManagerStatus
 class DeviceManager {
 private:
     DeviceCatalog &catalog;                        ///< Shared device catalog loaded during boot.
-    vscp::Client &protocolClient;                  ///< Shared VSCP request client supplied by the application.
+    RuntimeProtocolSession protocolClient;         ///< Panel session policy over the injected shared VSCP client.
     std::array<VirtualPin, NUM_PINS> PinMap;     ///< Mapping of pins to devices.
 
     bool initialized = false;                 ///< Initialization state flag
@@ -61,7 +61,7 @@ private:
     std::vector<BaseDevice *> filterConnectedDevices(const std::vector<BaseDevice *> &devices) const;
     void resetPinState(size_t pinIndex);
     void applyAssignedPinsToDevices() const;
-    void disconnectAssignedDevices(const std::vector<BaseDevice *> &devices) const;
+    void disconnectAssignedDevices(const std::vector<BaseDevice *> &devices);
     bool connectAssignedDevices(const std::vector<BaseDevice *> &devices);
     bool isValidPinIndex(size_t pinIndex) const;
     VirtualPin *getPinState(size_t pinIndex);
@@ -95,7 +95,9 @@ public:
      * @brief Check if the manager is currently running
      * @return True if running, false otherwise
      */
-    bool isRunning(){ return Status == ManagerStatus::RUNNING; }
+    bool isRunning(){ return Status == ManagerStatus::RUNNING && !protocolClient.connectionLost(); }
+    bool hasLostConnection() const { return protocolClient.connectionLost(); }
+    bool reconnectDevice(BaseDevice *device);
 
     /**
      * @brief Set the running status of the manager

@@ -17,7 +17,7 @@
  *      INCLUDES
  *********************/
 #include "../config.hpp"
-#include "vscp_client.hpp"
+#include "../runtime_protocol_session.hpp"
 #include "../exceptions/devices_exceptions.hpp" ///< Device related exceptions.
 #include "../helpers.hpp"    ///< Helper functions.
 
@@ -241,7 +241,7 @@ protected:
      *
      * This function sends a request to the real device to synchronize configuration values.
      */
-    void syncConfigs(vscp::Client &protocolClient)
+    void syncConfigs(RuntimeProtocolSession &protocolClient)
     {
         isConfigsSync = false; // Set flag to indicate config state is not synchronized with the real device.
         redrawPending = false; // Reset redraw flag.
@@ -267,7 +267,7 @@ protected:
      *
      * This function sends a request to the real device to read runtime values.
      */
-    void syncValues(vscp::Client &protocolClient)
+    void syncValues(RuntimeProtocolSession &protocolClient)
     {
         try
         {
@@ -493,7 +493,7 @@ public:
     /**
      * @brief Synchronize runtime control payload with the real device.
      */
-    void syncControls(vscp::Client &protocolClient)
+    void syncControls(RuntimeProtocolSession &protocolClient)
     {
         isControlsSync = false;
         redrawPending = false;
@@ -839,7 +839,7 @@ public:
      * @brief Connect the device to its assigned pins.
      * 
      */
-    bool connect(vscp::Client &protocolClient)
+    bool connect(RuntimeProtocolSession &protocolClient)
     {
         std::string pins = getPins();
         if(pins.empty()) {
@@ -864,7 +864,7 @@ public:
      * @brief Disconnect the device from its assigned pins.
      * 
      */
-    bool disconnect(vscp::Client &protocolClient)
+    bool disconnect(RuntimeProtocolSession &protocolClient)
     {
         auto response = protocolClient.disconnect(vscp::String(UID.c_str()));
         if (response.status == vscp::Status::Error)
@@ -1119,7 +1119,7 @@ public:
      *
      * @throws Exception if synchronization fails.
      */
-    virtual bool synchronize(vscp::Client &protocolClient)
+    virtual bool synchronize(RuntimeProtocolSession &protocolClient)
     {
         const bool syncConfigsChannel = usesConfigChannel();
         const bool syncValuesChannel = usesUpdateChannel();
@@ -1487,7 +1487,7 @@ void printDevice(BaseDevice *device);
  * @param device Pointer to the device to be synchronized.
  * @throws Exceptions should be internally resolved to prevent program from crash.
  */
-bool syncDevice(BaseDevice *device, vscp::Client &protocolClient);
+bool syncDevice(BaseDevice *device, RuntimeProtocolSession &protocolClient);
 
 /**
  * @brief Initialize the device.
@@ -1505,7 +1505,7 @@ bool initDevice(BaseDevice *device);
  * @param device Pointer to the device to be connected.
  * @throws Exceptions should be internally resolved to prevent program from crash.
  */
-bool connectDevice(BaseDevice *device, vscp::Client &protocolClient);
+bool connectDevice(BaseDevice *device, RuntimeProtocolSession &protocolClient);
 
 /**
  * @brief Disconnect the device from its current pins.
@@ -1513,6 +1513,6 @@ bool connectDevice(BaseDevice *device, vscp::Client &protocolClient);
  * @param device Pointer to the device to be disconnected.
  * @throws Exceptions should be internally resolved to prevent program from crash.
  */
-bool disconnectDevice(BaseDevice *device, vscp::Client &protocolClient);
+bool disconnectDevice(BaseDevice *device, RuntimeProtocolSession &protocolClient);
 
 #endif // BASE_DEVICE_HPP

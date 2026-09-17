@@ -316,6 +316,26 @@ void SignalsVisualizationGui::addLogoPanelToWidget(lv_obj_t *parentWidget)
 
 void SignalsVisualizationGui::drawCurrentDevice(bool force)
 {
+    if (deviceManager.hasLostConnection()) {
+        paused = true;
+        deviceManager.setRunning(false);
+        toolbarPanel.setPaused(true);
+        feedbackPanel.showDisconnect(ui_DeviceWidget, this, [](lv_event_t *event) {
+            auto *self = static_cast<SignalsVisualizationGui*>(lv_event_get_user_data(event));
+            if (!self->deviceManager.reconnectDevice(self->currentDevice)) {
+                splashMessage("Reconnect failed. Check the cable and Board power, then try again.");
+                return;
+            }
+            self->feedbackPanel.hideDisconnect();
+            self->paused = false;
+            self->toolbarPanel.setPaused(false);
+            self->deviceManager.setRunning(true);
+            self->updateChart(true);
+        });
+        return;
+    }
+    feedbackPanel.hideDisconnect();
+
     if (!currentDevice)
     {
         debugLogMessage("SignalsVisualizationGui::drawCurrentDevice", "gui redraw skipped", "no current device");
@@ -1239,7 +1259,7 @@ void SignalsVisualizationGui::handleBackButtonClick(){
 
 void SignalsVisualizationGui::handlePauseButtonClick()
 {
-    if (settingsPanel.isVisible()) return;
+    if (settingsPanel.isVisible() || deviceManager.hasLostConnection()) return;
     paused = !paused;
     deviceManager.setRunning(!paused);
     toolbarPanel.setPaused(paused);
@@ -1453,9 +1473,9 @@ void SignalsVisualizationGui::hideSettingsPanel(bool resume)
     manualScalePanel.hide();
     settingsPanel.hide();
     if (wasVisible) {
-        paused = false;
-        deviceManager.setRunning(resume);
-        toolbarPanel.setPaused(false);
+        paused = deviceManager.hasLostConnection();
+        deviceManager.setRunning(resume && !paused);
+        toolbarPanel.setPaused(paused);
     }
 }
 
@@ -1539,6 +1559,7 @@ void SignalsVisualizationGui::hideVisualization()
         return;
 
     hideSettingsPanel(false);
+    feedbackPanel.hideDisconnect();
     lv_obj_add_flag(ui_DeviceWidget, LV_OBJ_FLAG_HIDDEN);
     debugLogMessage("SignalsVisualizationGui::hideVisualization", "gui operation", "hidden");
 }

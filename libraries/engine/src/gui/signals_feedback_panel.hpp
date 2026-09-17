@@ -9,8 +9,11 @@ private:
     lv_obj_t *ui_ShadowOverlay = nullptr;
     lv_obj_t *ui_Alert = nullptr;
     lv_obj_t *ui_AlertLabel = nullptr;
+    lv_obj_t *disconnectPanel = nullptr;
 
 public:
+    void showDisconnect(lv_obj_t *parent, void *userData, lv_event_cb_t reconnectCallback);
+    void hideDisconnect();
     void showShadowOverlay();
     void hideShadowOverlay();
 

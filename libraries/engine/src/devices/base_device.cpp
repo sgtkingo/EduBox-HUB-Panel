@@ -152,7 +152,7 @@ void printDevice(BaseDevice *device) {
     }
 }
 
-bool syncDevice(BaseDevice *device, vscp::Client &protocolClient) {
+bool syncDevice(BaseDevice *device, RuntimeProtocolSession &protocolClient) {
     if(device == nullptr) {
         debugLogMessage("syncDevice", "device pointer invalid", "device is null");
         return false;
@@ -215,7 +215,7 @@ bool initDevice(BaseDevice *device) {
     }
 }
 
-bool connectDevice(BaseDevice *device, vscp::Client &protocolClient) {
+bool connectDevice(BaseDevice *device, RuntimeProtocolSession &protocolClient) {
     if(device == nullptr) {
         debugLogMessage("connectDevice", "device pointer invalid", "device is null");
         return false;
@@ -251,7 +251,7 @@ bool connectDevice(BaseDevice *device, vscp::Client &protocolClient) {
     }
 }
 
-bool disconnectDevice(BaseDevice *device, vscp::Client &protocolClient) {
+bool disconnectDevice(BaseDevice *device, RuntimeProtocolSession &protocolClient) {
     if(device == nullptr) {
         debugLogMessage("disconnectDevice", "device pointer invalid", "device is null");
         return false;

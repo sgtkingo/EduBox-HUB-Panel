@@ -112,3 +112,62 @@ void SignalsFeedbackPanel::closeConfirmationDialog(lv_event_t *e)
         lv_obj_del(msgbox);
     }
 }
+
+void SignalsFeedbackPanel::showDisconnect(lv_obj_t *parent, void *userData, lv_event_cb_t reconnectCallback)
+{
+    if (disconnectPanel || !parent) return;
+    // Screen parent avoids clipping to the narrower device card (760 px).
+    disconnectPanel = lv_obj_create(lv_scr_act());
+    lv_obj_remove_style_all(disconnectPanel);
+    lv_obj_set_size(disconnectPanel, LV_PCT(100), 250);
+    lv_obj_center(disconnectPanel);
+    lv_obj_clear_flag(disconnectPanel, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_bg_color(disconnectPanel, lv_color_hex(0xB32632), 0);
+    lv_obj_set_style_bg_opa(disconnectPanel, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(disconnectPanel, 0, 0);
+    lv_obj_set_style_radius(disconnectPanel, 0, 0);
+    lv_obj_set_style_shadow_width(disconnectPanel, 0, 0);
+    lv_obj_set_style_text_color(disconnectPanel, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_font(disconnectPanel, &lv_font_montserrat_16, 0);
+
+    auto *icon = lv_label_create(disconnectPanel);
+    lv_label_set_text(icon, LV_SYMBOL_USB " " LV_SYMBOL_CLOSE);
+    lv_obj_set_style_text_font(icon, &lv_font_montserrat_24, 0);
+    lv_obj_align(icon, LV_ALIGN_TOP_MID, 0, 18);
+
+    auto *message = lv_label_create(disconnectPanel);
+    lv_label_set_text(message, "DISCONNECT");
+    lv_obj_set_style_text_font(message, &lv_font_montserrat_24, 0);
+    lv_obj_align(message, LV_ALIGN_TOP_MID, 0, 58);
+
+    auto *description = lv_label_create(disconnectPanel);
+    lv_obj_set_width(description, LV_PCT(90));
+    lv_obj_set_style_text_align(description, LV_TEXT_ALIGN_CENTER, 0);
+    lv_label_set_text(description,
+        "Connection to Board was lost. Visualization is paused.\n"
+        "Check the cable and Board power, then press Reconnect.");
+    lv_obj_align(description, LV_ALIGN_TOP_MID, 0, 102);
+
+    auto *button = lv_btn_create(disconnectPanel);
+    lv_obj_set_size(button, 190, 44);
+    lv_obj_align(button, LV_ALIGN_BOTTOM_MID, 0, -18);
+    lv_obj_set_style_bg_color(button, lv_color_hex(0x8E1C27), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(button, lv_color_hex(0x751821), LV_PART_MAIN | LV_STATE_PRESSED);
+    lv_obj_set_style_bg_opa(button, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_border_width(button, 0, LV_PART_MAIN);
+    lv_obj_set_style_shadow_width(button, 0, LV_PART_MAIN);
+    lv_obj_set_style_radius(button, 8, LV_PART_MAIN);
+    lv_obj_set_style_text_color(button, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
+    lv_obj_set_style_text_font(button, &lv_font_montserrat_16, LV_PART_MAIN);
+    auto *caption = lv_label_create(button);
+    lv_label_set_text(caption, LV_SYMBOL_REFRESH " Reconnect");
+    lv_obj_center(caption);
+    lv_obj_add_event_cb(button, reconnectCallback, LV_EVENT_CLICKED, userData);
+    lv_obj_move_foreground(disconnectPanel);
+}
+
+void SignalsFeedbackPanel::hideDisconnect()
+{
+    if (disconnectPanel) lv_obj_del(disconnectPanel);
+    disconnectPanel = nullptr;
+}
