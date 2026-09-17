@@ -2,6 +2,7 @@
 
 #include "../helpers.hpp"
 #include "../managers/storage_manager.hpp"
+#include "../managers/app_config_manager.hpp"
 #include "./device_catalog_browser.hpp"
 #include "./images/ui_images.h"
 #include "lvgl_storage_fs.hpp"
@@ -66,6 +67,7 @@ bool isGifPath(const std::string &path)
 
 std::string findDevicePicturePath(const std::string &storedPicture = "")
 {
+    if (!AppConfigManager::useDevicePictures()) return "";
     if (storedPicture.empty() || storedPicture == "placeholder:device") {
         return "";
     }
@@ -353,7 +355,7 @@ void LibraryEditorGui::updatePicturePreview(const std::string &deviceUid, const 
     pictureSourcePath.clear();
     const std::string picturePath = findDevicePicturePath(storedPicture);
     const bool hasPicture = !picturePath.empty();
-    const bool pictureConfigured = !storedPicture.empty() && storedPicture != "placeholder:device";
+    const bool pictureConfigured = AppConfigManager::useDevicePictures() && !storedPicture.empty() && storedPicture != "placeholder:device";
 
 #if LV_USE_GIF
     if (ui_PictureGif) {
@@ -379,7 +381,8 @@ void LibraryEditorGui::updatePicturePreview(const std::string &deviceUid, const 
         );
         lv_obj_clear_flag(ui_PictureImage, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(ui_PictureFallbackLabel, LV_OBJ_FLAG_HIDDEN);
-        lv_label_set_text(ui_PictureFallbackLabel, pictureConfigured ? "Picture not found" : "Picture not provided");
+        lv_label_set_text(ui_PictureFallbackLabel, !AppConfigManager::useDevicePictures()
+            ? "Pictures disabled" : (pictureConfigured ? "Picture not found" : "Picture not provided"));
         if (pictureConfigured) {
             if (!ui_PictureWarningBadge) {
                 ui_PictureWarningBadge = lv_obj_create(ui_PicturePreview);

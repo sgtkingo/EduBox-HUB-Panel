@@ -17,6 +17,7 @@ private:
     lv_obj_t *ui_CommDropdown = nullptr;
     lv_obj_t *ui_ThemeDropdown = nullptr;
     lv_obj_t *ui_LanguageDropdown = nullptr;
+    lv_obj_t *ui_UseDevicePictures = nullptr;
     lv_obj_t *ui_ApplicationInput = nullptr;
     lv_obj_t *ui_VersionInput = nullptr;
     lv_obj_t *ui_MetadataStatus = nullptr;

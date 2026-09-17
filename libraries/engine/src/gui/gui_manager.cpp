@@ -393,6 +393,7 @@ bool GuiManager::saveCatalogMetadata(const std::string &application,
 bool GuiManager::saveAppSettings(DefaultCommunicationMode defaultCommunication,
                                  ThemeMode theme,
                                  LanguageMode language,
+                                 bool useDevicePictures,
                                  std::string &error)
 {
     try {
@@ -400,6 +401,7 @@ bool GuiManager::saveAppSettings(DefaultCommunicationMode defaultCommunication,
         config.defaultCommunication = defaultCommunication;
         config.theme = theme;
         config.language = language;
+        config.useDevicePictures = useDevicePictures;
 
         if (!AppConfigManager::save(config, error)) {
             return false;

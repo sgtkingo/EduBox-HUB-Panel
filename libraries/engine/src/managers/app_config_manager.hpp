@@ -10,11 +10,14 @@ struct AppConfig
     DefaultCommunicationMode defaultCommunication = DefaultCommunicationMode::ASK;
     ThemeMode theme = ThemeMode::LIGHT;
     LanguageMode language = LanguageMode::ENGLISH;
+    bool useDevicePictures = true;
 };
 
 class AppConfigManager
 {
+    static bool devicePicturesEnabled;
 public:
+    static bool useDevicePictures() { return devicePicturesEnabled; }
     static bool load(AppConfig &config, std::string &error);
     static bool save(const AppConfig &config, std::string &error);
 

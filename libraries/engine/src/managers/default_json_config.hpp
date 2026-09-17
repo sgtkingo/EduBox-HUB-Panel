@@ -2,7 +2,8 @@
   "defaultCommunication": "ask",
   "appearance": {
     "theme": "light",
-    "language": "en"
+    "language": "en",
+    "useDevicePictures": true
   }
 }
 )json"

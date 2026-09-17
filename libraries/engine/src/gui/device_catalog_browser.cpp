@@ -9,6 +9,7 @@
 #include "lvgl_storage_fs.hpp"
 #include "../config.hpp"
 #include "../managers/storage_manager.hpp"
+#include "../managers/app_config_manager.hpp"
 
 namespace
 {
@@ -392,6 +393,7 @@ bool isStoragePicturePath(const std::string &path)
 
 std::string findDevicePicturePath(const BaseDevice *device)
 {
+    if (!AppConfigManager::useDevicePictures()) return "";
     if (!device || (!storageManager().isAvailable() && !storageManager().init())) {
         return "";
     }
@@ -442,7 +444,7 @@ void renderPicture(lv_obj_t *parent, const BaseDevice *device)
     lv_obj_center(canvas);
     lv_obj_add_flag(canvas, LV_OBJ_FLAG_HIDDEN);
     const std::string imagePath = findDevicePicturePath(device);
-    const bool pictureConfigured = device && !device->getPicture().empty() && device->getPicture() != "placeholder:device";
+    const bool pictureConfigured = AppConfigManager::useDevicePictures() && device && !device->getPicture().empty() && device->getPicture() != "placeholder:device";
     if (imagePath.empty()) {
         lv_obj_add_flag(canvas, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(image, LV_OBJ_FLAG_HIDDEN);

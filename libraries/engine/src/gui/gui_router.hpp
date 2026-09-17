@@ -41,6 +41,7 @@ public:
     virtual bool saveAppSettings(DefaultCommunicationMode defaultCommunication,
                                  ThemeMode theme,
                                  LanguageMode language,
+                                 bool useDevicePictures,
                                  std::string &error) = 0;
 
     virtual bool shouldSelectionBackGoToMainMenu() const = 0;
@@ -51,6 +52,7 @@ public:
     virtual void setThemeMode(ThemeMode mode) = 0;
     virtual LanguageMode getLanguageMode() const = 0;
     virtual void setLanguageMode(LanguageMode mode) = 0;
+    virtual bool getUseDevicePictures() const = 0;
     virtual std::string getAppVersion() const = 0;
     virtual uint32_t getVisualizationUpdatePeriodMs() const = 0;
     virtual void setVisualizationUpdatePeriodMs(uint32_t periodMs) = 0;

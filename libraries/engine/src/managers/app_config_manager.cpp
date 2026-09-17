@@ -7,6 +7,8 @@
 
 #include <ArduinoJson.h>
 
+bool AppConfigManager::devicePicturesEnabled = true;
+
 namespace
 {
 std::string normalize(std::string value)
@@ -25,6 +27,7 @@ void applyConfigDocument(JsonDocument &doc, AppConfig &config)
     JsonObjectConst appearance = doc["appearance"].as<JsonObjectConst>();
     config.theme = AppConfigManager::themeFromString(appearance["theme"] | "light");
     config.language = AppConfigManager::languageFromString(appearance["language"] | "en");
+    config.useDevicePictures = appearance["useDevicePictures"] | true;
 }
 }
 
@@ -97,6 +100,7 @@ bool AppConfigManager::load(AppConfig &config, std::string &error)
 {
     error.clear();
     config = AppConfig();
+    devicePicturesEnabled = config.useDevicePictures;
 
     if (!storageManager().exists(STORAGE_APP_CONFIG_PATH)) {
         debugLogMessage(DEBUG_VERBOSE_IMPORTANT,
@@ -117,6 +121,7 @@ bool AppConfigManager::load(AppConfig &config, std::string &error)
         }
 
         applyConfigDocument(doc, config);
+        devicePicturesEnabled = config.useDevicePictures;
         return true;
     }
 
@@ -143,6 +148,7 @@ bool AppConfigManager::load(AppConfig &config, std::string &error)
     }
 
     applyConfigDocument(doc, config);
+    devicePicturesEnabled = config.useDevicePictures;
 
     debugLogMessage(DEBUG_VERBOSE_IMPORTANT,
                     "AppConfigManager::load",
@@ -181,6 +187,7 @@ bool AppConfigManager::save(const AppConfig &config, std::string &error)
     JsonObject appearance = doc["appearance"].to<JsonObject>();
     appearance["theme"] = toString(config.theme);
     appearance["language"] = toString(config.language);
+    appearance["useDevicePictures"] = config.useDevicePictures;
 
     const size_t written = serializeJsonPretty(doc, file);
     file.close();
@@ -191,6 +198,7 @@ bool AppConfigManager::save(const AppConfig &config, std::string &error)
         return false;
     }
 
+    devicePicturesEnabled = config.useDevicePictures;
     debugLogMessage(DEBUG_VERBOSE_IMPORTANT,
                     "AppConfigManager::save",
                     "storage write",

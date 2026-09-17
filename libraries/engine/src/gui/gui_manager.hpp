@@ -19,6 +19,7 @@
 #include "gui_state.hpp"
 #include "visualization_poll_schedule.hpp"
 #include "signals_feedback_panel.hpp"
+#include "../managers/app_config_manager.hpp"
 
 class GuiManager : public GuiRouter
 {
@@ -90,6 +91,7 @@ public:
     bool saveAppSettings(DefaultCommunicationMode defaultCommunication,
                          ThemeMode theme,
                          LanguageMode language,
+                         bool useDevicePictures,
                          std::string &error) override;
     bool shouldSelectionBackGoToMainMenu() const override { return navigationPolicy.shouldSelectionBackGoToMainMenu(); }
 
@@ -100,6 +102,7 @@ public:
     void setThemeMode(ThemeMode mode) override { navigationPolicy.setThemeMode(mode); }
     LanguageMode getLanguageMode() const override { return navigationPolicy.getLanguageMode(); }
     void setLanguageMode(LanguageMode mode) override { navigationPolicy.setLanguageMode(mode); }
+    bool getUseDevicePictures() const override { return AppConfigManager::useDevicePictures(); }
     std::string getAppVersion() const override { return appVersion; }
     uint32_t getVisualizationUpdatePeriodMs() const override { return visualizationPollSchedule.periodMs(); }
     void setVisualizationUpdatePeriodMs(uint32_t periodMs) override;

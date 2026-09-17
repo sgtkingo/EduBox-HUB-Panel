@@ -180,7 +180,8 @@ void SettingsGui::build()
     lv_obj_set_style_text_font(title, &lv_font_montserrat_24, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     lv_obj_t *communicationPanel = lv_obj_create(ui_Widget);
-    lv_obj_set_size(communicationPanel, 300, 132);
+    lv_obj_set_size(communicationPanel, 300, 120);
+    lv_obj_set_style_pad_all(communicationPanel, 8, 0);
     lv_obj_set_pos(communicationPanel, 26, 82);
 
     ui_CurrentMode = lv_label_create(communicationPanel);
@@ -207,8 +208,10 @@ void SettingsGui::build()
     }, LV_EVENT_ALL, this);
 
     lv_obj_t *appearancePanel = lv_obj_create(ui_Widget);
-    lv_obj_set_size(appearancePanel, 300, 132);
-    lv_obj_set_pos(appearancePanel, 26, 226);
+    lv_obj_set_size(appearancePanel, 300, 160);
+    lv_obj_set_pos(appearancePanel, 26, 214);
+    lv_obj_set_style_pad_all(appearancePanel, 0, 0);
+    lv_obj_clear_flag(appearancePanel, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t *appearanceTitle = lv_label_create(appearancePanel);
     lv_label_set_text(appearanceTitle, "Appearance");
@@ -258,6 +261,12 @@ void SettingsGui::build()
 
         self->router.setLanguageMode(SettingsGui::getLanguageFromDropdownIndex(lv_dropdown_get_selected(self->ui_LanguageDropdown)));
     }, LV_EVENT_ALL, this);
+
+    ui_UseDevicePictures = lv_checkbox_create(appearancePanel);
+    lv_checkbox_set_text(ui_UseDevicePictures, "Use devices pictures");
+    lv_obj_set_pos(ui_UseDevicePictures, 12, 126);
+    lv_obj_set_style_text_font(ui_UseDevicePictures, &lv_font_montserrat_16, 0);
+    lv_obj_add_state(ui_UseDevicePictures, LV_STATE_CHECKED);
 
     lv_obj_t *metadataPanel = lv_obj_create(ui_Widget);
     lv_obj_set_size(metadataPanel, 340, 278);
@@ -358,7 +367,7 @@ void SettingsGui::build()
 
 void SettingsGui::saveAppConfig()
 {
-    if (!ui_CommDropdown || !ui_ThemeDropdown || !ui_LanguageDropdown || !ui_AppConfigStatus) {
+    if (!ui_CommDropdown || !ui_ThemeDropdown || !ui_LanguageDropdown || !ui_UseDevicePictures || !ui_AppConfigStatus) {
         return;
     }
 
@@ -369,7 +378,8 @@ void SettingsGui::saveAppConfig()
     const LanguageMode language = getLanguageFromDropdownIndex(lv_dropdown_get_selected(ui_LanguageDropdown));
 
     std::string error;
-    if (!router.saveAppSettings(communication, theme, language, error)) {
+    const bool useDevicePictures = lv_obj_has_state(ui_UseDevicePictures, LV_STATE_CHECKED);
+    if (!router.saveAppSettings(communication, theme, language, useDevicePictures, error)) {
         lv_obj_set_style_text_color(ui_AppConfigStatus, lv_color_hex(0xB00020), LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_label_set_text(ui_AppConfigStatus, error.empty() ? "Settings save failed." : error.c_str());
         return;
@@ -392,6 +402,10 @@ void SettingsGui::refresh()
     }
     if (ui_LanguageDropdown) {
         lv_dropdown_set_selected(ui_LanguageDropdown, getLanguageDropdownIndex(router.getLanguageMode()));
+    }
+    if (ui_UseDevicePictures) {
+        if (router.getUseDevicePictures()) lv_obj_add_state(ui_UseDevicePictures, LV_STATE_CHECKED);
+        else lv_obj_clear_state(ui_UseDevicePictures, LV_STATE_CHECKED);
     }
 
     if (ui_ApplicationInput) {
