@@ -6,7 +6,7 @@ from emulator.engine.emulator_patterns import find_vscp_request_start as find_pa
 
 class ProtocolFramingTest(unittest.TestCase):
     def test_request_detection_does_not_depend_on_type_order(self):
-        request = "?api=1.5&app=board&db=1.3&type=INIT"
+        request = "?api=1.6&app=board&db=1.3&type=INIT"
         self.assertEqual(find_vscp_request_start(request), 0)
         self.assertEqual(find_pattern_request_start(request), 0)
 
@@ -17,7 +17,7 @@ class ProtocolFramingTest(unittest.TestCase):
         self.assertIn("status=1", emulator.process_request(request))
 
     def test_request_is_extracted_after_a_log_prefix(self):
-        request = "?db=1.3&type=INIT&api=1.5&app=board"
+        request = "?db=1.3&type=INIT&api=1.6&app=board"
         line = "DEBUG: transport ready " + request
 
         emulator = VSCPEmulator()

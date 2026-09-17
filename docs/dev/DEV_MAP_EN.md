@@ -249,12 +249,12 @@ Main classes/files:
 - `libraries/vscp/src/io/vscp_transport.*`
 - `libraries/vscp/src/io/vscp_stream_transport.*`
 
-The current API version is in `vscp::API_VERSION`, currently `1.5`.
+The current API version is in `vscp::API_VERSION`, currently `1.6`.
 
 The wire format is a URL-like query string:
 
 ```text
-?type=INIT&app=board&db=1.0&api=1.5
+?type=INIT&app=board&db=1.0&api=1.6
 ?status=1
 
 ?type=CONNECT&id=cpu_temp&pins=1,4
@@ -561,7 +561,7 @@ python emulator/virt_patterns_runner.py
 Example VSCP console/log output:
 
 ```text
-Received: ?type=INIT&app=board&db=1.0&api=1.5
+Received: ?type=INIT&app=board&db=1.0&api=1.6
 Sent: ?status=1
 Received: ?type=CONNECT&id=cpu_temp&pins=1,4
 Sent: ?id=cpu_temp&status=1
@@ -653,7 +653,7 @@ Sent: ?id=cpu_temp&status=1&temp=0.21
 - Verify that the upstream endpoint responds to:
 
 ```text
-?type=INIT&app=board&db=1.0&api=1.5
+?type=INIT&app=board&db=1.0&api=1.6
 ```
 
 - Firmware path: `CommunicationSelectionGui -> DeviceManager::initializeProtocolConnection -> vscp::Client::init`.

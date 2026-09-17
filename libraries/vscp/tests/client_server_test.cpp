@@ -40,7 +40,7 @@ private:
 
 int main() {
   // Parameter order is irrelevant to Panel response parsing.
-  for (const auto& frame : {"?api=1.5&status=1", "?status=1&api=1.5",
+  for (const auto& frame : {"?api=1.6&status=1", "?status=1&api=1.6",
                             "?id=S01&status=1", "?status=1&id=S01"}) {
     vscp::ResponseStatus response;
     vscp::String error;
@@ -59,12 +59,12 @@ int main() {
   stripReceiver.connectTo(stripSender);
   vscp::String dirtyMessage;
   dirtyMessage += static_cast<char>(1);
-  dirtyMessage += "  ?type=INIT&api=1.5  ";
+  dirtyMessage += "  ?type=INIT&api=1.6  ";
   dirtyMessage += static_cast<char>(127);
   stripSender.writeLine(dirtyMessage);
   vscp::String cleanMessage;
   assert(stripReceiver.readLine(cleanMessage) == vscp::ReadStatus::Message);
-  assert(cleanMessage == "?type=INIT&api=1.5");
+  assert(cleanMessage == "?type=INIT&api=1.6");
 
   MemoryTransport clientTransport;
   MemoryTransport serverTransport;

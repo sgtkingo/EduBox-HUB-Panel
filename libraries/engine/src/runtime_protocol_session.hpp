@@ -24,7 +24,7 @@ class RuntimeProtocolSession {
     }
     template<class Request>
     vscp::ResponseStatus runtimeRequest(Request request) {
-        if (lost) return stopped("DISCONNECT: communication stopped");
+        if (connectionLost()) return stopped("DISCONNECT: communication stopped");
         auto response = isInitialized() ? request() : stopped("Protocol not initialized");
         if (response.status == vscp::Status::Ok) failures = 0;
         else if (++failures >= 5) {
@@ -36,7 +36,7 @@ class RuntimeProtocolSession {
 public:
     explicit RuntimeProtocolSession(vscp::Client& protocolClient, Clock timeSource = defaultClock)
         : client(protocolClient), clock(timeSource) {}
-    bool connectionLost() const { return lost; }
+    bool connectionLost() const { return lost || client.sessionClosed(); }
     uint8_t consecutiveFailures() const { return failures; }
     uint8_t consecutivePingFailures() const { return pingFailures; }
     // Run only from the UART owner (main loop), never from an interrupt/timer callback.

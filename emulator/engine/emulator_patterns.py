@@ -22,6 +22,12 @@ Response: ?status=1/0&param1=value1&error=message
 Author: Generated for VSCP Protocol Testing
 """
 
+try:
+    from .vscp_session import API_VERSION, handle_session_command, ping_response, send_bye
+except ImportError:
+    from vscp_session import API_VERSION, handle_session_command, ping_response, send_bye
+
+
 import time
 import random
 import threading
@@ -271,10 +277,18 @@ class VSCPEmulator:
             print(f"✗ Failed to connect to {self.port}: {e}")
             return False
     
+    def bye(self):
+        return send_bye(self)
+
     def disconnect_serial(self):
         """Disconnect from serial port"""
         if self.ser and self.ser.is_open:
-            self.ser.close()
+            try:
+                self.bye()
+            except Exception as error:
+                print(f"BYE write failed: {error}")
+            finally:
+                self.ser.close()
             print("✓ Serial connection closed")
     
     def parse_message(self, message: str) -> Dict[str, str]:
@@ -802,9 +816,9 @@ class VSCPEmulator:
         try:
             params = self.parse_message(message)
             request_type = params.get('type', '').upper()
-            if request_type == 'PING':
-                response = ping_response(params)
-                return self.build_message(response) if response is not None else ''
+            control = handle_session_command(self, params)
+            if control is not None:
+                return control
 
             # Route to appropriate handler
             handlers = {
@@ -918,7 +932,7 @@ class VSCPEmulator:
         
         try:
             print("\n💡 Enhanced emulator ready! Realistic sensor data patterns active.")
-            print("   Example: ?type=INIT&app=board&db=1.0&api=1.5")
+            print("   Example: ?type=INIT&app=board&db=1.0&api=1.6")
             print("   Press Ctrl+C to stop\n")
             
             # Keep main thread alive and show simulation status

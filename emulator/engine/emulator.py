@@ -8,11 +8,19 @@ The wire format is a URL-like query string:
     ?type=UPDATE&id=S01
     ?id=S01&status=1&temp=24&humi=58
 
-Supported API 1.5 requests:
+Supported API 1.6 requests:
 INIT, UPDATE, CONFIG, CONTROL, RESET, CONNECT, DISCONNECT, PING.
 """
 
 from __future__ import annotations
+
+
+try:
+    from .vscp_session import API_VERSION, handle_session_command, ping_response, send_bye
+except ImportError:
+    from vscp_session import API_VERSION, handle_session_command, ping_response, send_bye
+
+
 
 import json
 import importlib
@@ -30,20 +38,11 @@ except ModuleNotFoundError:
     serial = None
 
 
-PROTOCOL_API_VERSION = "1.5"
+PROTOCOL_API_VERSION = API_VERSION
 DEFAULT_DB_VERSION = "1.3"
 DEFAULT_APP_NAME = "board"
 
 
-def ping_response(params: Dict[str, str]) -> Optional[Dict[str, str]]:
-    """Mirror server PING: acknowledge valid client requests, silently consume replies."""
-    sequence = params.get("seq", "")
-    if (params.get("side") != "client" or "status" in params
-            or not sequence or len(sequence) > 10 or sequence[0] == "0"
-            or any(character not in "0123456789" for character in sequence)
-            or int(sequence) > 0xFFFFFFFF):
-        return None
-    return {"side": "server", "seq": sequence, "status": "1"}
 FLOAT_DTYPES = {"float", "double"}
 INT_DTYPES = {"int", "integer", "long"}
 
@@ -323,9 +322,17 @@ class VSCPEmulator:
             print(f"Failed to connect to {self.port}: {exc}")
             return False
 
+    def bye(self):
+        return send_bye(self)
+
     def disconnect_serial(self):
         if self.ser and self.ser.is_open:
-            self.ser.close()
+            try:
+                self.bye()
+            except Exception as error:
+                print(f"BYE write failed: {error}")
+            finally:
+                self.ser.close()
             print("Serial connection closed")
 
     def parse_message(self, message: str) -> Dict[str, str]:
@@ -607,9 +614,9 @@ class VSCPEmulator:
         try:
             params = self.parse_message(message)
             request_type = params.get("type", "").upper()
-            if request_type == "PING":
-                response = ping_response(params)
-                return self.build_message(response) if response is not None else ""
+            control = handle_session_command(self, params)
+            if control is not None:
+                return control
             handlers = {
                 "INIT": self.handle_init,
                 "UPDATE": self.handle_update,
@@ -701,7 +708,7 @@ class VSCPEmulator:
         listen_thread.start()
 
         try:
-            print("Emulator ready. Example: ?type=INIT&app=board&db=1.0&api=1.5")
+            print("Emulator ready. Example: ?type=INIT&app=board&db=1.0&api=1.6")
             while True:
                 time.sleep(1)
         except KeyboardInterrupt:

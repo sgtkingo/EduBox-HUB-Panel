@@ -1,6 +1,6 @@
 # VSCP client/server library
 
-The library implements **Virtual Sensors Communication Protocol** API `1.5`.
+The library implements **Virtual Sensors Communication Protocol** API `1.6`. Library version: `2.2.2`.
 It is not the event-based Very Simple Control Protocol.
 
 ## Components
@@ -80,8 +80,8 @@ these diagnostic lines: if it treats them as protocol requests, its extra error
 responses can interfere with INIT or cause a missing response UID. For hardware
 with a separate native USB connection, `CDCOnBoot=cdc` moves Serial logging to
 that USB console and keeps diagnostics off the protocol UART0.
-Response parameter order is irrelevant: `?api=1.5&status=1` and
-`?status=1&api=1.5` both parse successfully.
+Response parameter order is irrelevant: `?api=1.6&status=1` and
+`?status=1&api=1.6` both parse successfully.
 
 Before dispatch, the common transport removes bytes outside printable ASCII
 (`32..126`) and trims surrounding whitespace on both RX and TX. The Arduino
@@ -141,3 +141,23 @@ Run desktop protocol and PING regression tests:
 ```sh
 python libraries/vscp/tests/run_tests.py
 ```
+
+## BYE session notification
+
+```text
+?type=BYE&side=client
+```
+
+The server may likewise send `side=server`. BYE has no reply, status or sequence.
+It works before INIT, closes only this transport's protocol session and cancels
+its PING. Hardware connections/pins and the physical transport are unchanged.
+Further normal requests need a new INIT; PING still works. Receiving BYE while
+waiting for a response immediately returns `Peer disconnected`.
+
+Use `client.bye()` or `server.bye(transport)` to send. The boolean result means
+write success, not confirmed delivery; failed writes leave local state intact.
+Use `client.sessionClosed()` to observe closure, or `server.onBye(handler)` to
+observe a remote BYE with the affected `Transport&`. The callback fires once
+per closed session and is rearmed by successful INIT. These methods share the
+same single-owner execution requirements as poll and other transactions.
+Wrong-role and status-bearing BYE messages do not close a session.

@@ -110,6 +110,18 @@ int main() {
     now += 2999; session.serviceLink(true); assert(wire.pings == beforeRun);
     ++now; session.serviceLink(true);
     assert(wire.pings == beforeRun + 1 && session.consecutivePingFailures() == 1);
+    // BYE stops the session immediately, without six failed probes.
+    wire.incoming.push_back("?type=BYE&side=server");
+    protocol.poll();
+    assert(session.connectionLost() && !session.isInitialized());
+    const int beforeBye = wire.writes;
+    now += 3000; session.serviceLink(true);
+    session.update("S01"); session.control("S01", {});
+    assert(wire.writes == beforeBye);
+    wire.answerPing = true;
+    assert(session.init().status == vscp::Status::Ok);
+    assert(session.connect("S01", "1").status == vscp::Status::Ok);
+    assert(!session.connectionLost());
 }
 ''', encoding="utf-8")
             executable = root / "ping-watchdog.exe"
