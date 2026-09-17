@@ -438,6 +438,7 @@ public:
      * @brief Show the device visualization screen
      */
     void showVisualization();
+    bool reconnectAfterDisconnect();
 
     /**
      * @brief Hide the device visualization screen

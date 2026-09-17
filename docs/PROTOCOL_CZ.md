@@ -1,6 +1,6 @@
 # VSCP Protocol
 
-VSCP (Virtual Sensors Communication Protocol) je jednoduchý textový protokol pro komunikaci mezi HMI/firmwarem EduBox HUB Panel a cílovou deskou, reálným zařízením nebo emulátorem. Aktuální implementace projektu používá VSCP API `1.4`.
+VSCP (Virtual Sensors Communication Protocol) je jednoduchý textový protokol pro komunikaci mezi HMI/firmwarem EduBox HUB Panel a cílovou deskou, reálným zařízením nebo emulátorem. Aktuální implementace projektu používá VSCP API `1.5`.
 
 Protokol je request-response. HMI vždy odešle jeden command, protistrana odpoví jednou response zprávou. Runtime polling, configurace, control hodnoty i pin assignment jsou postavené nad stejným formátem.
 
@@ -164,7 +164,7 @@ INIT navazuje protokolové spojení. Firmware ho volá lazy, typicky při vstupu
 Aktuální plný request:
 
 ```text
-?type=INIT&app=board&db=1.0&api=1.4
+?type=INIT&app=board&db=1.0&api=1.5
 ```
 
 Povinné/volitelné parametry:
@@ -174,7 +174,7 @@ Povinné/volitelné parametry:
 | `type=INIT` | ano | Command type |
 | `app` | doporučený | Název aplikace/katalogu, např. `board` |
 | `db` | doporučený | Verze Device DB, např. `1.0` |
-| `api` | ano pro aktuální flow | VSCP API verze, aktuálně `1.4` |
+| `api` | ano pro aktuální flow | VSCP API verze, aktuálně `1.5` |
 
 Úspěšná response:
 
@@ -185,7 +185,7 @@ Povinné/volitelné parametry:
 Chybná response:
 
 ```text
-?status=0&error=API mismatch - got 1.2, expected 1.4
+?status=0&error=API mismatch - got 1.2, expected 1.5
 ```
 
 Emulátor:
@@ -417,7 +417,7 @@ sequenceDiagram
 
     UI->>DM: ensureProtocolInitialized()
     DM->>P: init(app, db)
-    P->>HW: ?type=INIT&app=board&db=1.0&api=1.4
+    P->>HW: ?type=INIT&app=board&db=1.0&api=1.5
     HW-->>P: ?status=1
     P-->>DM: OK
     DM-->>UI: connection ready
@@ -507,7 +507,7 @@ Tyto výjimky se mají tisknout v catch handleru přes `Exception::print()`.
 ### Sensor CPU Temp
 
 ```text
-HMI -> HW: ?type=INIT&app=board&db=1.0&api=1.4
+HMI -> HW: ?type=INIT&app=board&db=1.0&api=1.5
 HW -> HMI: ?status=1
 
 HMI -> HW: ?type=CONNECT&id=cpu_temp&pins=1
@@ -523,7 +523,7 @@ HW -> HMI: ?id=cpu_temp&status=1
 ### Actuator PWM LED Driver
 
 ```text
-HMI -> HW: ?type=INIT&app=board&db=1.0&api=1.4
+HMI -> HW: ?type=INIT&app=board&db=1.0&api=1.5
 HW -> HMI: ?status=1
 
 HMI -> HW: ?type=CONNECT&id=A00&pins=3
@@ -539,7 +539,7 @@ HW -> HMI: ?id=A00&status=1
 ### Hybrid Temperature Regulator
 
 ```text
-HMI -> HW: ?type=INIT&app=board&db=1.0&api=1.4
+HMI -> HW: ?type=INIT&app=board&db=1.0&api=1.5
 HW -> HMI: ?status=1
 
 HMI -> HW: ?type=CONNECT&id=H00&pins=3,5,6

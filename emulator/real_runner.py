@@ -79,7 +79,7 @@ if __name__ == "__main__":
         threading.Thread(target=emu.listen_loop, daemon=True).start()
 
         # The firmware initializes the protocol with:
-        # ?type=INIT&app=<catalog application>&db=<catalog version>&api=1.4
+        # ?type=INIT&app=<catalog application>&db=<catalog version>&api=1.5
 
         # Start real sensor bridge
         real_sensors = load_sensors()

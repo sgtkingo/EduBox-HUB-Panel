@@ -258,6 +258,7 @@ void GuiManager::navigateTo(GuiState targetState)
     }
 
     debugLogMessage("GuiManager::navigateTo", "gui navigation", "from=%d to=%d", static_cast<int>(currentState), static_cast<int>(targetState));
+    connectionFeedback.hideDisconnect();
     applyRuntimePolicy(targetState);
     renderState(targetState);
     currentState = targetState;
@@ -426,6 +427,32 @@ void GuiManager::setVisualizationUpdatePeriodMs(uint32_t periodMs)
                     static_cast<unsigned>(visualizationPollSchedule.periodMs()));
 }
 
+void GuiManager::updateConnectionFeedback()
+{
+    if (!deviceManager.hasLostConnection()) {
+        connectionFeedback.hideDisconnect();
+        return;
+    }
+    deviceManager.setRunning(false);
+    connectionFeedback.showDisconnect(lv_scr_act(), this, [](lv_event_t *event) {
+        auto *self = static_cast<GuiManager*>(lv_event_get_user_data(event));
+        self->reconnectProtocolSession();
+    });
+}
+
+void GuiManager::reconnectProtocolSession()
+{
+    const bool connected = currentState == GuiState::VISUALIZATION
+        ? screenRegistry.getVisualizationGui().reconnectAfterDisconnect()
+        : deviceManager.reconnectProtocolLink();
+    if (!connected) {
+        splashMessage("Reconnect failed. Check the cable and Board power, then try again.");
+        return;
+    }
+    connectionFeedback.hideDisconnect();
+    visualizationPollSchedule.reset(lv_tick_get());
+}
+
 void GuiManager::redraw()
 {
     lv_timer_handler();
@@ -455,6 +482,8 @@ void GuiManager::redraw()
     default:
         break;
     }
+    // Link loss is global, including selection and a paused online visualization.
+    updateConnectionFeedback();
     // Yield to the RTOS without imposing the display frame period on polling.
     delay_ms(1);
 }

@@ -1,6 +1,6 @@
 # VSCP client/server library
 
-The library implements **Virtual Sensors Communication Protocol** API `1.4`.
+The library implements **Virtual Sensors Communication Protocol** API `1.5`.
 It is not the event-based Very Simple Control Protocol.
 
 ## Components
@@ -80,8 +80,8 @@ these diagnostic lines: if it treats them as protocol requests, its extra error
 responses can interfere with INIT or cause a missing response UID. For hardware
 with a separate native USB connection, `CDCOnBoot=cdc` moves Serial logging to
 that USB console and keeps diagnostics off the protocol UART0.
-Response parameter order is irrelevant: `?api=1.4&status=1` and
-`?status=1&api=1.4` both parse successfully.
+Response parameter order is irrelevant: `?api=1.5&status=1` and
+`?status=1&api=1.5` both parse successfully.
 
 Before dispatch, the common transport removes bytes outside printable ASCII
 (`32..126`) and trims surrounding whitespace on both RX and TX. The Arduino
@@ -95,11 +95,11 @@ Client is always `side=client`; each Server endpoint is `side=server`.
 
 ```text
 ?type=PING&side=client&seq=42
-?type=PING&side=server&seq=42&status=1
+?side=server&seq=42&status=1
 ```
 
-Either side may initiate, including simultaneously. `status` distinguishes an
-acknowledgement from a request; acknowledgements are never answered. `seq` is a
+Either side may initiate, including simultaneously. Requests contain `type=PING`; acknowledgements contain `side`, `seq` and
+`status` without `type`. These fields route acknowledgements separately; acknowledgements are never answered. `seq` is a
 canonical decimal integer from 1 to 4294967295. Each endpoint generates its own
 sequence, advancing for every attempt and wrapping to 1. Only `status=1` from
 the opposite side with the pending sequence is accepted before the deadline.

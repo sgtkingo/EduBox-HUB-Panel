@@ -13,6 +13,7 @@ Protocol Methods:
 - RESET: Sensor reset operations
 - CONNECT: Connect sensor to specific pin
 - DISCONNECT: Disconnect sensor from pin
+- PING: Link heartbeat, independent of INIT and sensor sessions
 
 Protocol Format: URL-like with key-value pairs
 Request: ?type=METHOD&param1=value1&param2=value2
@@ -44,6 +45,7 @@ try:
         PROTOCOL_API_VERSION,
         available_serial_ports,
         load_catalog_defaults,
+        ping_response,
     )
 except ImportError:
     from emulator import (
@@ -54,6 +56,7 @@ except ImportError:
         PROTOCOL_API_VERSION,
         available_serial_ports,
         load_catalog_defaults,
+        ping_response,
     )
 
 for stream in (sys.stdout, sys.stderr):
@@ -799,6 +802,9 @@ class VSCPEmulator:
         try:
             params = self.parse_message(message)
             request_type = params.get('type', '').upper()
+            if request_type == 'PING':
+                response = ping_response(params)
+                return self.build_message(response) if response is not None else ''
 
             # Route to appropriate handler
             handlers = {
@@ -912,7 +918,7 @@ class VSCPEmulator:
         
         try:
             print("\n💡 Enhanced emulator ready! Realistic sensor data patterns active.")
-            print("   Example: ?type=INIT&app=board&db=1.0&api=1.4")
+            print("   Example: ?type=INIT&app=board&db=1.0&api=1.5")
             print("   Press Ctrl+C to stop\n")
             
             # Keep main thread alive and show simulation status

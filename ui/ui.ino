@@ -11,6 +11,8 @@
 #include <vscp.hpp>
 #include <engine.hpp>  // include engine header
 #include "vscp_panel_log_sink.hpp"
+#include <esp_timer.h>
+#include <atomic>
 
 /*Don't forget to set Sketchbook location in File/Preferences to the path of your UI project (the parent foder of this INO file)*/
 
@@ -159,6 +161,18 @@ DeviceVisualizationSession deviceVisualizationSession; // Active visualization s
 DataBundleManager dataBundleManager; // Create DataBundleManager instance
 GuiManager guiManager(deviceCatalog, deviceBrowserState, deviceManager, deviceVisualizationSession, dataBundleManager);  // Create GUI manager instance
 
+#if ALLOW_PING_INTERRUPT
+static std::atomic<bool> linkWatchdogDue{false};
+static esp_timer_handle_t linkWatchdogTimer = nullptr;
+static bool linkWatchdogTimerReady = false;
+
+static void requestLinkWatchdog(void *)
+{
+    // Timer callback only schedules work. UART and GUI stay in the main loop.
+    linkWatchdogDue.store(true, std::memory_order_release);
+}
+#endif
+
 static GuiManager &router()
 {
     return guiManager;
@@ -225,6 +239,17 @@ void setup ()
         return;
     }
 
+#if ALLOW_PING_INTERRUPT
+    esp_timer_create_args_t linkTimerArgs = {};
+    linkTimerArgs.callback = requestLinkWatchdog;
+    linkTimerArgs.dispatch_method = ESP_TIMER_TASK;
+    linkTimerArgs.name = "protocol-link";
+    if (esp_timer_create(&linkTimerArgs, &linkWatchdogTimer) == ESP_OK) {
+        linkWatchdogTimerReady = esp_timer_start_periodic(linkWatchdogTimer, 100000) == ESP_OK;
+    }
+    // If timer setup fails, the main loop still services the watchdog by its clock.
+#endif
+
 
     // Wait a moment to show the boot screen
     delay(2000);
@@ -237,6 +262,14 @@ void setup ()
 void loop ()
 {
     vscpClient.poll();
+#if ALLOW_PING_INTERRUPT
+    if (!linkWatchdogTimerReady || linkWatchdogDue.exchange(false, std::memory_order_acquire)) {
+        // During online Run, UPDATE/CONFIG/CONTROL own the link watchdog.
+        const bool onlineRunning = guiManager.getCurrentState() == GuiState::VISUALIZATION
+            && deviceManager.isRunning();
+        deviceManager.serviceProtocolLink(!onlineRunning);
+    }
+#endif
     // Redraw GUI based on current state
     guiManager.redraw();
 }

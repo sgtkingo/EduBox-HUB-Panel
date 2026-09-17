@@ -320,21 +320,8 @@ void SignalsVisualizationGui::drawCurrentDevice(bool force)
         paused = true;
         deviceManager.setRunning(false);
         toolbarPanel.setPaused(true);
-        feedbackPanel.showDisconnect(ui_DeviceWidget, this, [](lv_event_t *event) {
-            auto *self = static_cast<SignalsVisualizationGui*>(lv_event_get_user_data(event));
-            if (!self->deviceManager.reconnectDevice(self->currentDevice)) {
-                splashMessage("Reconnect failed. Check the cable and Board power, then try again.");
-                return;
-            }
-            self->feedbackPanel.hideDisconnect();
-            self->paused = false;
-            self->toolbarPanel.setPaused(false);
-            self->deviceManager.setRunning(true);
-            self->updateChart(true);
-        });
         return;
     }
-    feedbackPanel.hideDisconnect();
 
     if (!currentDevice)
     {
@@ -1553,13 +1540,22 @@ void SignalsVisualizationGui::showVisualization()
     debugLogMessage("SignalsVisualizationGui::showVisualization", "gui operation", "shown");
 }
 
+bool SignalsVisualizationGui::reconnectAfterDisconnect()
+{
+    if (!deviceManager.reconnectDevice(currentDevice)) return false;
+    paused = settingsPanel.isVisible();
+    toolbarPanel.setPaused(paused);
+    deviceManager.setRunning(!paused);
+    updateChart(true);
+    return true;
+}
+
 void SignalsVisualizationGui::hideVisualization()
 {
     if (!initialized || !ui_DeviceWidget)
         return;
 
     hideSettingsPanel(false);
-    feedbackPanel.hideDisconnect();
     lv_obj_add_flag(ui_DeviceWidget, LV_OBJ_FLAG_HIDDEN);
     debugLogMessage("SignalsVisualizationGui::hideVisualization", "gui operation", "hidden");
 }

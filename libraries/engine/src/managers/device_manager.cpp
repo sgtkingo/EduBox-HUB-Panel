@@ -18,6 +18,7 @@
 #include "device_manager.hpp"
 #include "helpers.hpp"
 #include "expt.hpp"
+#include "../config.hpp"
 
 DeviceManager::DeviceManager(DeviceCatalog &catalog, vscp::Client &protocolClient)
     : catalog(catalog), protocolClient(protocolClient) {
@@ -469,4 +470,24 @@ bool DeviceManager::reconnectDevice(BaseDevice *device)
     const bool connected = connectDevice(device, protocolClient);
     device->setPinConnectionActive(connected);
     return connected;
+}
+
+void DeviceManager::serviceProtocolLink(bool allowPing)
+{
+    protocolClient.serviceLink(ALLOW_PING_INTERRUPT != 0 && allowPing);
+}
+
+bool DeviceManager::reconnectProtocolLink()
+{
+    const auto connectedDevices = getConnectedAssignedDevices();
+    protocolClient.invalidateInitialization();
+    if (!ensureProtocolInitialized()) return false;
+    for (auto *device : connectedDevices) {
+        if (!connectDevice(device, protocolClient)) {
+            protocolClient.stopCommunication();
+            return false;
+        }
+    }
+    // Selection may have no connected device yet: successful INIT restores the link.
+    return protocolClient.completeLinkReconnect();
 }

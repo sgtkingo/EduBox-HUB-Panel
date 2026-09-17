@@ -18,6 +18,7 @@
 #include "gui_screen_registry.hpp"
 #include "gui_state.hpp"
 #include "visualization_poll_schedule.hpp"
+#include "signals_feedback_panel.hpp"
 
 class GuiManager : public GuiRouter
 {
@@ -36,10 +37,13 @@ private:
     bool initialized;
     VisualizationPollSchedule visualizationPollSchedule;
     uint32_t lastVisualizationDrawMs = 0;
+    SignalsFeedbackPanel connectionFeedback;
 
     void hideAllComponents();
     void applyRuntimePolicy(GuiState targetState);
     void renderState(GuiState targetState);
+    void updateConnectionFeedback();
+    void reconnectProtocolSession();
 
 public:
     explicit GuiManager(DeviceCatalog &catalog, DeviceBrowserState &browserState, DeviceManager &manager, DeviceVisualizationSession &visualizationSession, DataBundleManager &dataBundleManager);

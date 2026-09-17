@@ -8,8 +8,8 @@ The wire format is a URL-like query string:
     ?type=UPDATE&id=S01
     ?id=S01&status=1&temp=24&humi=58
 
-Supported API 1.4 requests:
-INIT, UPDATE, CONFIG, CONTROL, RESET, CONNECT, DISCONNECT.
+Supported API 1.5 requests:
+INIT, UPDATE, CONFIG, CONTROL, RESET, CONNECT, DISCONNECT, PING.
 """
 
 from __future__ import annotations
@@ -30,9 +30,20 @@ except ModuleNotFoundError:
     serial = None
 
 
-PROTOCOL_API_VERSION = "1.4"
+PROTOCOL_API_VERSION = "1.5"
 DEFAULT_DB_VERSION = "1.3"
 DEFAULT_APP_NAME = "board"
+
+
+def ping_response(params: Dict[str, str]) -> Optional[Dict[str, str]]:
+    """Mirror server PING: acknowledge valid client requests, silently consume replies."""
+    sequence = params.get("seq", "")
+    if (params.get("side") != "client" or "status" in params
+            or not sequence or len(sequence) > 10 or sequence[0] == "0"
+            or any(character not in "0123456789" for character in sequence)
+            or int(sequence) > 0xFFFFFFFF):
+        return None
+    return {"side": "server", "seq": sequence, "status": "1"}
 FLOAT_DTYPES = {"float", "double"}
 INT_DTYPES = {"int", "integer", "long"}
 
@@ -596,6 +607,9 @@ class VSCPEmulator:
         try:
             params = self.parse_message(message)
             request_type = params.get("type", "").upper()
+            if request_type == "PING":
+                response = ping_response(params)
+                return self.build_message(response) if response is not None else ""
             handlers = {
                 "INIT": self.handle_init,
                 "UPDATE": self.handle_update,
@@ -687,7 +701,7 @@ class VSCPEmulator:
         listen_thread.start()
 
         try:
-            print("Emulator ready. Example: ?type=INIT&app=board&db=1.0&api=1.4")
+            print("Emulator ready. Example: ?type=INIT&app=board&db=1.0&api=1.5")
             while True:
                 time.sleep(1)
         except KeyboardInterrupt:

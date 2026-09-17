@@ -97,7 +97,9 @@ public:
      */
     bool isRunning(){ return Status == ManagerStatus::RUNNING && !protocolClient.connectionLost(); }
     bool hasLostConnection() const { return protocolClient.connectionLost(); }
+    void serviceProtocolLink(bool allowPing);
     bool reconnectDevice(BaseDevice *device);
+    bool reconnectProtocolLink();
 
     /**
      * @brief Set the running status of the manager

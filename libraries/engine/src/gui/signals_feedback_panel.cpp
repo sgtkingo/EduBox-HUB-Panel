@@ -144,7 +144,7 @@ void SignalsFeedbackPanel::showDisconnect(lv_obj_t *parent, void *userData, lv_e
     lv_obj_set_width(description, LV_PCT(90));
     lv_obj_set_style_text_align(description, LV_TEXT_ALIGN_CENTER, 0);
     lv_label_set_text(description,
-        "Connection to Board was lost. Visualization is paused.\n"
+        "Connection to Board was lost. Communication is stopped.\n"
         "Check the cable and Board power, then press Reconnect.");
     lv_obj_align(description, LV_ALIGN_TOP_MID, 0, 102);
 

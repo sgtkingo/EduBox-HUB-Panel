@@ -258,12 +258,12 @@ Hlavni tridy/soubory:
 - `libraries/vscp/src/io/vscp_transport.*`
 - `libraries/vscp/src/io/vscp_stream_transport.*`
 
-Aktuální API verze je v `vscp::API_VERSION`, nyní `1.4`.
+Aktuální API verze je v `vscp::API_VERSION`, nyní `1.5`.
 
 Wire format je URL-like query string:
 
 ```text
-?type=INIT&app=board&db=1.0&api=1.4
+?type=INIT&app=board&db=1.0&api=1.5
 ?status=1
 
 ?type=CONNECT&id=cpu_temp&pins=1,4
@@ -572,7 +572,7 @@ python emulator/virt_patterns_runner.py
 Priklad VSCP z konzole/logu:
 
 ```text
-Received: ?type=INIT&app=board&db=1.0&api=1.4
+Received: ?type=INIT&app=board&db=1.0&api=1.5
 Sent: ?status=1
 Received: ?type=CONNECT&id=cpu_temp&pins=1,4
 Sent: ?id=cpu_temp&status=1
@@ -663,7 +663,7 @@ Sent: ?id=cpu_temp&status=1&temp=0.21
 - Overit, ze upstream posila odpoved na:
 
 ```text
-?type=INIT&app=board&db=1.0&api=1.4
+?type=INIT&app=board&db=1.0&api=1.5
 ```
 
 - Firmware cesta: `CommunicationSelectionGui -> DeviceManager::initializeProtocolConnection -> vscp::Client::init`.

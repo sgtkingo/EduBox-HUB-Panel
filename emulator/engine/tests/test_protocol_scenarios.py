@@ -101,7 +101,7 @@ class ProtocolScenarioTest(unittest.TestCase):
         self.assertEqual(response.get("status"), "0")
 
         response = response_parameters(
-            emulator, "INIT", api="1.4", app="board", db="1.3"
+            emulator, "INIT", api="1.5", app="board", db="1.3"
         )
         self.assert_success(response)
 
@@ -165,7 +165,7 @@ class ProtocolScenarioTest(unittest.TestCase):
         emulator = PatternEmulator(SENSORS)
         with redirect_stdout(self.output):
             self.assert_success(
-                response_parameters(emulator, "INIT", api="1.4", app="board", db="1.3")
+                response_parameters(emulator, "INIT", api="1.5", app="board", db="1.3")
             )
 
             for scenario in SCENARIOS:
@@ -184,7 +184,7 @@ class ProtocolScenarioTest(unittest.TestCase):
                 with redirect_stdout(self.output):
                     self.assert_success(
                         response_parameters(
-                            emulator, "INIT", api="1.4", app="board", db="1.3"
+                            emulator, "INIT", api="1.5", app="board", db="1.3"
                         )
                     )
                     emulator.simulation_mode = scenario

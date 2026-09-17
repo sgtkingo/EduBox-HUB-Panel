@@ -40,6 +40,12 @@
 #endif
 
 // Application-owned UART wiring for the injected VSCP transport.
+// 1 = automatic link PING after INIT (also in Pause and on other screens).
+// 0 = disable automatic PING and its timer; runtime request safeguards remain.
+#ifndef ALLOW_PING_INTERRUPT
+#define ALLOW_PING_INTERRUPT 1
+#endif
+
 #ifndef EDUBOX_HUB_PANEL_VSCP_UART_PORT
 #define EDUBOX_HUB_PANEL_VSCP_UART_PORT 0
 #endif
