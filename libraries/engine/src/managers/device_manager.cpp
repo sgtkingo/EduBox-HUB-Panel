@@ -477,6 +477,19 @@ void DeviceManager::serviceProtocolLink(bool allowPing)
     protocolClient.serviceLink(ALLOW_PING_INTERRUPT != 0 && allowPing);
 }
 
+void DeviceManager::endProtocolSession()
+{
+    setRunning(false);
+    const bool sent = protocolClient.bye();
+    for (auto *device : catalog.getDevices()) {
+        if (device) device->setPinConnectionActive(false);
+    }
+    if (!sent) {
+        debugLogMessage(DEBUG_VERBOSE_ERRORS, "DeviceManager::endProtocolSession",
+                        "protocol bye failed", "watchdog stopped locally");
+    }
+}
+
 bool DeviceManager::reconnectProtocolLink()
 {
     const auto connectedDevices = getConnectedAssignedDevices();

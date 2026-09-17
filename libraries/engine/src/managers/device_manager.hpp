@@ -100,6 +100,7 @@ public:
     void serviceProtocolLink(bool allowPing);
     bool reconnectDevice(BaseDevice *device);
     bool reconnectProtocolLink();
+    void endProtocolSession();
 
     /**
      * @brief Set the running status of the manager

@@ -260,6 +260,9 @@ void GuiManager::navigateTo(GuiState targetState)
     debugLogMessage("GuiManager::navigateTo", "gui navigation", "from=%d to=%d", static_cast<int>(currentState), static_cast<int>(targetState));
     connectionFeedback.hideDisconnect();
     applyRuntimePolicy(targetState);
+    if (targetState == GuiState::MAIN_MENU) {
+        deviceManager.endProtocolSession();
+    }
     renderState(targetState);
     currentState = targetState;
 }

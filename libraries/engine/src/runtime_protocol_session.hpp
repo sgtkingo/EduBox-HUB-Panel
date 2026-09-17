@@ -16,6 +16,7 @@ class RuntimeProtocolSession {
     bool monitoring = false;
     bool lost = false;
     bool initRequired = false;
+    bool closedLocally = false;
 
     vscp::ResponseStatus stopped(const char *message) const {
         vscp::ResponseStatus response;
@@ -24,7 +25,7 @@ class RuntimeProtocolSession {
     }
     template<class Request>
     vscp::ResponseStatus runtimeRequest(Request request) {
-        if (connectionLost()) return stopped("DISCONNECT: communication stopped");
+        if (closedLocally || connectionLost()) return stopped("DISCONNECT: communication stopped");
         auto response = isInitialized() ? request() : stopped("Protocol not initialized");
         if (response.status == vscp::Status::Ok) failures = 0;
         else if (++failures >= 5) {
@@ -36,7 +37,19 @@ class RuntimeProtocolSession {
 public:
     explicit RuntimeProtocolSession(vscp::Client& protocolClient, Clock timeSource = defaultClock)
         : client(protocolClient), clock(timeSource) {}
-    bool connectionLost() const { return lost || client.sessionClosed(); }
+    bool connectionLost() const { return !closedLocally && (lost || client.sessionClosed()); }
+    bool bye() {
+        if (closedLocally) return true;
+        const bool notifyPeer = monitoring || isInitialized() || connectionLost();
+        // Always stop locally, including when the cable is absent or writing fails.
+        closedLocally = true;
+        monitoring = false;
+        initRequired = true;
+        lost = false;
+        failures = 0;
+        pingFailures = 0;
+        return !notifyPeer || client.bye();
+    }
     uint8_t consecutiveFailures() const { return failures; }
     uint8_t consecutivePingFailures() const { return pingFailures; }
     // Run only from the UART owner (main loop), never from an interrupt/timer callback.
@@ -74,6 +87,7 @@ public:
         initRequired = response.status != vscp::Status::Ok;
         monitoring = !initRequired;
         if (monitoring) {
+            closedLocally = false;
             lastPingMs = clock();
             pingFailures = 0;
         }

@@ -22,16 +22,20 @@ class Transport : public vscp::Transport {
 public:
     std::deque<vscp::String> incoming;
     bool answerPing = true, answerConnect = true, answerInit = true;
-    int pings = 0, writes = 0;
+    int pings = 0, writes = 0, byes = 0;
+    bool writable = true;
 protected:
     bool writeLineImpl(const vscp::String& message) override {
         ++writes;
+        if (!writable) return false;
         vscp::Request request;
         vscp::String error;
         assert(vscp::Codec::parseRequest(message, request, error));
         if (request.command == vscp::Command::Ping) {
             ++pings;
             if (answerPing) incoming.push_back("?side=server&status=1&seq=" + request.value("seq"));
+        } else if (request.command == vscp::Command::Bye) {
+            ++byes; // One-way: deliberately no response.
         } else if (request.command == vscp::Command::Init) {
             incoming.push_back(answerInit ? "?status=1" : "?status=0");
         } else if (request.command == vscp::Command::Connect) {
@@ -122,6 +126,28 @@ int main() {
     assert(session.init().status == vscp::Status::Ok);
     assert(session.connect("S01", "1").status == vscp::Status::Ok);
     assert(!session.connectionLost());
+    // Home intentionally ends the session; it must not display DISCONNECT.
+    assert(session.bye());
+    assert(wire.byes == 1 && protocol.sessionClosed());
+    assert(!session.connectionLost() && !session.isInitialized());
+    const int afterHome = wire.writes;
+    now += 30000; session.serviceLink(true);
+    session.update("S01"); session.control("S01", {}); session.config("S01", {});
+    assert(wire.writes == afterHome && session.consecutiveFailures() == 0);
+    assert(session.bye() && wire.writes == afterHome); // Repeated Home doesn't repeat BYE.
+    assert(session.init().status == vscp::Status::Ok);
+    const int afterReinit = wire.pings;
+    now += 3000; session.serviceLink(true); assert(wire.pings == afterReinit + 1);
+    // Failed BYE write still disables the local watchdog and requires another INIT.
+    wire.writable = false;
+    assert(!session.bye());
+    assert(protocol.isInitialized() && !session.isInitialized() && !session.connectionLost());
+    const int failedByeWrites = wire.writes;
+    now += 30000; session.serviceLink(true); session.update("S01");
+    assert(wire.writes == failedByeWrites);
+    wire.writable = true;
+    session.init(); now += 3000; session.serviceLink(true);
+    assert(wire.pings == afterReinit + 2);
 }
 ''', encoding="utf-8")
             executable = root / "ping-watchdog.exe"
