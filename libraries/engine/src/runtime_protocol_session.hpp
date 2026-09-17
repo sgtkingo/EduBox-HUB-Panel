@@ -30,7 +30,7 @@ class RuntimeProtocolSession {
         auto response = isInitialized() ? request() : stopped("Protocol not initialized");
         if (response.status == vscp::Status::Ok) failures = 0;
         else if (++failures >= 5) {
-            lost = true;
+            stopCommunication();
             response.error = vscp::String("DISCONNECT: ") + response.error;
         }
         return response;
@@ -40,6 +40,7 @@ public:
         : client(protocolClient), clock(timeSource) {}
     bool connectionLost() const { return !closedLocally && (lost || client.sessionClosed()); }
     bool bye() {
+        stopRequested = false; // Home/cancel must not arm a later radio reconnect.
         if (closedLocally) return true;
         const bool notifyPeer = monitoring || isInitialized() || connectionLost();
         // Always stop locally, including when the cable is absent or writing fails.
@@ -68,7 +69,7 @@ public:
         const auto response = client.ping();
         lastPingMs = clock(); // Retry spacing starts after the response/timeout.
         if (response.status == vscp::Status::Ok) pingFailures = 0;
-        else if (++pingFailures >= 6) lost = true; // Initial probe + five retries.
+        else if (++pingFailures >= 6) stopCommunication(); // Initial probe + five retries.
     }
     bool isInitialized() const { return !initRequired && client.isInitialized(); }
     bool completeLinkReconnect() {

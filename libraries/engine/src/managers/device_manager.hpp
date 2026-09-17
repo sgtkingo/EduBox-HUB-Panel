@@ -99,6 +99,7 @@ public:
      */
     bool isRunning(){ return Status == ManagerStatus::RUNNING && !protocolClient.connectionLost(); }
     bool hasLostConnection() const { return protocolClient.connectionLost(); }
+    bool shouldPollProtocol() const { return protocolClient.isInitialized() && !protocolClient.connectionLost(); }
     void serviceProtocolLink(bool allowPing);
     bool reconnectDevice(BaseDevice *device);
     bool reconnectProtocolLink();

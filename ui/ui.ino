@@ -271,7 +271,7 @@ void loop ()
 {
     if (protocolLink.service()) deviceManager.notifyProtocolTransportDisconnected();
     deviceManager.serviceProtocolSafety();
-    vscpClient.poll();
+    if (deviceManager.shouldPollProtocol()) vscpClient.poll();
 #if ALLOW_PING_INTERRUPT
     if (!linkWatchdogTimerReady || linkWatchdogDue.exchange(false, std::memory_order_acquire)) {
         // During online Run, UPDATE/CONFIG/CONTROL own the link watchdog.

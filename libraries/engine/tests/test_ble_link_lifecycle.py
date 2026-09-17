@@ -30,6 +30,7 @@ class BleLifecycleTest(unittest.TestCase):
         loop = main.split("void loop ()", 1)[1]
         self.assertLess(loop.index("protocolLink.service()"), loop.index("vscpClient.poll()"))
         self.assertLess(loop.index("serviceProtocolSafety()"), loop.index("vscpClient.poll()"))
+        self.assertIn("deviceManager.shouldPollProtocol()", loop)
 
 if __name__ == "__main__":
     unittest.main()
