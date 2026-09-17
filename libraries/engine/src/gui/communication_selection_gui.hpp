@@ -17,6 +17,15 @@ private:
     lv_obj_t *ui_Widget = nullptr;
     lv_obj_t *ui_LoadingOverlay = nullptr;
     lv_obj_t *ui_LoadingLabel = nullptr;
+    lv_obj_t *wirelessPanel = nullptr, *wirelessStatus = nullptr;
+    lv_obj_t *wirelessPeers = nullptr, *wirelessPin = nullptr;
+    lv_timer_t *wirelessTimer = nullptr;
+    bool wirelessPending = false;
+    size_t displayedPeerCount = static_cast<size_t>(-1);
+    void showWireless(bool remembered);
+    void refreshWireless();
+    void startWirelessConnection(bool remembered);
+    void closeWireless();
 
     void createOptionButton(const char *text, lv_coord_t x, lv_coord_t y, DefaultCommunicationMode mode, bool supported = true);
     void createWirelessManualButton(lv_coord_t x, lv_coord_t y);

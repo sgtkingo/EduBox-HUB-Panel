@@ -125,6 +125,9 @@ jobs:
           arduino-cli core update-index
           arduino-cli core install "esp32:esp32@${{ inputs.esp32_core_version }}"
 
+      - name: Install pinned BLE dependency
+        run: arduino-cli lib install "NimBLE-Arduino@2.5.1"
+
       - name: Sync version artifacts
         if: ${{ inputs.run_version_sync }}
         shell: bash
@@ -157,6 +160,8 @@ jobs:
 
           arduino-cli compile \
             --fqbn "${{ inputs.fqbn }}" \
+            --build-property "compiler.cpp.extra_flags=-DCONFIG_BT_NIMBLE_MAX_CONNECTIONS=1 -DMYNEWT_VAL_BLE_SM_SC_ONLY=1 -DMYNEWT_VAL_BLE_SM_LEGACY=0" \
+            --build-property "compiler.c.extra_flags=-DCONFIG_BT_NIMBLE_MAX_CONNECTIONS=1 -DMYNEWT_VAL_BLE_SM_SC_ONLY=1 -DMYNEWT_VAL_BLE_SM_LEGACY=0" \
             --build-path "$BUILD_PATH" \
             ui
 

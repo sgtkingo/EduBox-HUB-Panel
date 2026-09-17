@@ -3,6 +3,8 @@
 #include "../helpers.hpp"
 #include "./images/ui_images.h"
 #include "expt.hpp"
+#include <cstring>
+#include <string>
 
 #ifndef LV_SYMBOL_SETTINGS
 #define LV_SYMBOL_SETTINGS "⚙"
@@ -60,8 +62,6 @@ void CommunicationSelectionGui::createWirelessManualButton(lv_coord_t x, lv_coor
         }
 
         auto *self = static_cast<CommunicationSelectionGui *>(lv_event_get_user_data(e));
-        // TODO: Navigate to Wireless Settings when the screen is implemented.
-        // TODO: Include a Wireless Explore flow for scanning available endpoints.
         self->handleModeSelection(DefaultCommunicationMode::WIRELESS_MANUAL);
     }, LV_EVENT_ALL, this);
 
@@ -156,10 +156,12 @@ void CommunicationSelectionGui::handleModeSelection(DefaultCommunicationMode mod
     }
 
     if (mode != DefaultCommunicationMode::CABLE) {
-        splashMessage("Wireless connection is not supported yet.");
+        showWireless(mode == DefaultCommunicationMode::WIRELESS_AUTO);
         return;
     }
 
+    deviceManager.endProtocolSession();
+    if (auto* link = deviceManager.getProtocolLinkControl()) link->selectCable();
     const uint32_t loadingStart = showLoading("Connecting...");
     if (!deviceManager.initializeProtocolConnection()) {
         finishLoading(loadingStart, false);
@@ -222,7 +224,7 @@ void CommunicationSelectionGui::constructCommunicationSelection(void)
     lv_obj_set_style_text_color(subtitle, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
 
     createOptionButton("Cable (UART)", 70, 130, DefaultCommunicationMode::CABLE);
-    createOptionButton("Wireless (BT)", 395, 130, DefaultCommunicationMode::WIRELESS_AUTO, false);
+    createOptionButton("Wireless (BLE)", 395, 130, DefaultCommunicationMode::WIRELESS_AUTO);
     createWirelessManualButton(625, 130);
     createModeIcon(&ui_img_cable_png, 180, 226, 150);
     createModeIcon(&ui_img_bluetooth_png, 539, 232, 150);
@@ -253,6 +255,9 @@ void CommunicationSelectionGui::hideCommunicationSelection(void)
         return;
     }
 
+    if (wirelessTimer) { lv_timer_del(wirelessTimer); wirelessTimer = nullptr; }
+    wirelessPanel = wirelessStatus = wirelessPeers = wirelessPin = nullptr;
+    wirelessPending = false;
     if (ui_Widget) {
         lv_obj_del(ui_Widget);
     }
@@ -262,4 +267,130 @@ void CommunicationSelectionGui::hideCommunicationSelection(void)
     ui_LoadingLabel = nullptr;
     connectionBusy = false;
     initialized = false;
+}
+
+void CommunicationSelectionGui::showWireless(bool remembered)
+{
+    auto* link = deviceManager.getProtocolLinkControl();
+    if (!link) { splashMessage("BLE transport unavailable in this build."); return; }
+    deviceManager.endProtocolSession();
+    if (!wirelessPanel) {
+        wirelessPanel = lv_obj_create(ui_Widget);
+        lv_obj_set_size(wirelessPanel, 720, 410);
+        lv_obj_center(wirelessPanel);
+        lv_obj_set_style_bg_color(wirelessPanel, lv_color_hex(0xFFFFFF), 0);
+        lv_obj_t* title = lv_label_create(wirelessPanel);
+        lv_label_set_text(title, "EduBox Board — Bluetooth LE");
+        lv_obj_set_pos(title, 12, 4);
+        wirelessStatus = lv_label_create(wirelessPanel);
+        lv_obj_set_width(wirelessStatus, 670); lv_obj_set_pos(wirelessStatus, 12, 34);
+        wirelessPeers = lv_dropdown_create(wirelessPanel);
+        lv_obj_set_size(wirelessPeers, 670, 42); lv_obj_set_pos(wirelessPeers, 12, 78);
+        lv_dropdown_set_options(wirelessPeers, "Scan for Boards...");
+        wirelessPin = lv_textarea_create(wirelessPanel);
+        lv_obj_set_size(wirelessPin, 165, 44); lv_obj_set_pos(wirelessPin, 12, 134);
+        lv_textarea_set_one_line(wirelessPin, true); lv_textarea_set_max_length(wirelessPin, 6);
+        lv_textarea_set_accepted_chars(wirelessPin, "0123456789");
+        lv_textarea_set_placeholder_text(wirelessPin, "6-digit Board PIN");
+        lv_textarea_set_password_mode(wirelessPin, true);
+        lv_obj_t* keyboard = lv_keyboard_create(wirelessPanel);
+        lv_obj_set_size(keyboard, 485, 145); lv_obj_set_pos(keyboard, 196, 132);
+        lv_keyboard_set_mode(keyboard, LV_KEYBOARD_MODE_NUMBER);
+        lv_keyboard_set_textarea(keyboard, wirelessPin);
+        auto addButton = [this](const char* text, int x, int y, lv_event_cb_t callback) {
+            auto* button = lv_btn_create(wirelessPanel);
+            lv_obj_set_size(button, 145, 40); lv_obj_set_pos(button, x, y);
+            lv_obj_add_event_cb(button, callback, LV_EVENT_CLICKED, this);
+            auto* label = lv_label_create(button); lv_label_set_text(label, text); lv_obj_center(label);
+        };
+        addButton("Connect selected", 12, 294, [](lv_event_t* e) {
+            static_cast<CommunicationSelectionGui*>(lv_event_get_user_data(e))->startWirelessConnection(false);
+        });
+        addButton("Scan", 182, 294, [](lv_event_t* e) {
+            auto* self = static_cast<CommunicationSelectionGui*>(lv_event_get_user_data(e));
+            self->wirelessPending = false; self->displayedPeerCount = static_cast<size_t>(-1);
+            self->deviceManager.getProtocolLinkControl()->scanWireless();
+        });
+        addButton("Remembered", 352, 294, [](lv_event_t* e) {
+            static_cast<CommunicationSelectionGui*>(lv_event_get_user_data(e))->startWirelessConnection(true);
+        });
+        addButton("Forget peer", 522, 294, [](lv_event_t* e) {
+            auto* self = static_cast<CommunicationSelectionGui*>(lv_event_get_user_data(e));
+            self->wirelessPending = false;
+            self->deviceManager.getProtocolLinkControl()->forgetWireless();
+            lv_textarea_set_text(self->wirelessPin, "");
+        });
+        addButton("Back / cancel", 12, 348, [](lv_event_t* e) {
+            static_cast<CommunicationSelectionGui*>(lv_event_get_user_data(e))->closeWireless();
+        });
+        auto* hint = lv_label_create(wirelessPanel);
+        lv_label_set_text(hint, "First pairing: read PIN on Board console.\nBoard BOOT held 3 s after boot resets bonding.");
+        lv_obj_set_pos(hint, 182, 350); lv_obj_set_width(hint, 490);
+        wirelessTimer = lv_timer_create([](lv_timer_t* timer) {
+            static_cast<CommunicationSelectionGui*>(timer->user_data)->refreshWireless();
+        }, 200, this);
+    }
+    lv_obj_clear_flag(wirelessPanel, LV_OBJ_FLAG_HIDDEN);
+    if (remembered && link->info().rememberedAddress[0]) startWirelessConnection(true);
+    else { displayedPeerCount = static_cast<size_t>(-1); link->scanWireless(); }
+}
+
+void CommunicationSelectionGui::startWirelessConnection(bool remembered)
+{
+    auto* link = deviceManager.getProtocolLinkControl();
+    if (!link || wirelessPending) return;
+    const auto info = link->info();
+    if (info.state == ProtocolLinkState::Scanning || info.state == ProtocolLinkState::Connecting ||
+        info.state == ProtocolLinkState::Securing) return;
+    if (remembered) {
+        if (!link->connectRemembered()) { splashMessage("No bonded Board remembered. Scan and pair first."); return; }
+    } else {
+        const char* pin = lv_textarea_get_text(wirelessPin);
+        if (std::strlen(pin) != 6) { splashMessage("Enter the six-digit PIN from the Board console."); return; }
+        uint32_t value = 0;
+        for (size_t i = 0; i < 6; ++i) value = value * 10 + uint32_t(pin[i] - '0');
+        if (!link->connectWireless(lv_dropdown_get_selected(wirelessPeers), value)) return;
+    }
+    lv_textarea_set_text(wirelessPin, ""); // PIN is never saved.
+    wirelessPending = true;
+}
+
+void CommunicationSelectionGui::refreshWireless()
+{
+    if (!wirelessPanel || lv_obj_has_flag(wirelessPanel, LV_OBJ_FLAG_HIDDEN)) return;
+    auto* link = deviceManager.getProtocolLinkControl();
+    const auto info = link->info();
+    const char* states[] = {"Off", "Idle", "Scanning...", "Connecting...", "Securing...", "Ready", "Retrying...", "Error"};
+    lv_label_set_text_fmt(wirelessStatus, "%s  MTU %u  %s\nRemembered: %s",
+        states[static_cast<unsigned>(info.state)], unsigned(info.mtu), info.error, info.rememberedAddress);
+    if (info.state != ProtocolLinkState::Scanning && displayedPeerCount != info.count) {
+        std::string options;
+        for (size_t i = 0; i < info.count; ++i) {
+            if (i) options += "\n";
+            options += std::string(info.peers[i].name) + "  " + info.peers[i].address +
+                "  (" + std::to_string(info.peers[i].rssi) + " dBm)";
+        }
+        lv_dropdown_set_options(wirelessPeers, options.empty() ? "No Board — try Scan" : options.c_str());
+        displayedPeerCount = info.count;
+    }
+    if (!wirelessPending) return;
+    if (info.state == ProtocolLinkState::Error) { wirelessPending = false; return; }
+    if (info.state != ProtocolLinkState::Ready) return;
+    wirelessPending = false;
+    // Still in the main GUI owner context, never in a BLE callback.
+    lv_label_set_text(wirelessStatus, "BLE ready. Initializing VSCP...");
+    lv_refr_now(nullptr);
+    if (!deviceManager.initializeProtocolConnection()) {
+        lv_label_set_text(wirelessStatus, "VSCP INIT failed: Board busy / firmware mismatch. Retry Connect.");
+        return;
+    }
+    router.completeCommunicationSelection(DefaultCommunicationMode::WIRELESS_MANUAL);
+    // Navigation deletes this panel/timer: do not touch any GUI object hereafter.
+}
+
+void CommunicationSelectionGui::closeWireless()
+{
+    wirelessPending = false;
+    deviceManager.getProtocolLinkControl()->stopWireless();
+    lv_obj_add_flag(wirelessPanel, LV_OBJ_FLAG_HIDDEN);
 }

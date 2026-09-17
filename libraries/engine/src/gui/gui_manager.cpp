@@ -287,11 +287,6 @@ void GuiManager::openVisualizationFlow()
 
 void GuiManager::completeCommunicationSelection(DefaultCommunicationMode mode)
 {
-    if (mode != DefaultCommunicationMode::CABLE) {
-        splashMessage("Wireless connection is not supported yet.");
-        return;
-    }
-
     navigateTo(navigationPolicy.finishCommunicationSelection(mode));
 }
 
@@ -451,7 +446,7 @@ void GuiManager::reconnectProtocolSession()
         ? screenRegistry.getVisualizationGui().reconnectAfterDisconnect()
         : deviceManager.reconnectProtocolLink();
     if (!connected) {
-        splashMessage("Reconnect failed. Check the cable and Board power, then try again.");
+        splashMessage("Reconnect failed. Check Board power and selected UART/BLE link, then retry.");
         return;
     }
     connectionFeedback.hideDisconnect();

@@ -178,11 +178,14 @@ bool DeviceManager::ensureProtocolInitialized()
 
 bool DeviceManager::initializeProtocolConnection()
 {
+    if (linkControl && linkControl->wirelessSelected() &&
+        linkControl->info().state != ProtocolLinkState::Ready) return false;
     debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "DeviceManager::initializeProtocolConnection", "protocol init", "initializing protocol on demand app=%s db=%s", catalog.getApplication().c_str(), catalog.getVersion().c_str());
 
     vscp::ResponseStatus response;
     response.error = "Protocol initialization failed";
-    for (size_t i = 0; i < DeviceManager::MAX_INIT_ATTEMPTS; i++)
+    const size_t attempts = linkControl && linkControl->wirelessSelected() ? 1 : DeviceManager::MAX_INIT_ATTEMPTS;
+    for (size_t i = 0; i < attempts; i++)
     {
         debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "DeviceManager::initializeProtocolConnection", "protocol init", "attempt=%u", static_cast<unsigned int>(i + 1));
         response = protocolClient.init(vscp::String(catalog.getApplication().c_str()), vscp::String(catalog.getVersion().c_str()));
@@ -476,11 +479,20 @@ void DeviceManager::serviceProtocolLink(bool allowPing)
 {
     protocolClient.serviceLink(ALLOW_PING_INTERRUPT != 0 && allowPing);
 }
+void DeviceManager::notifyProtocolTransportDisconnected()
+{
+    protocolClient.notifyTransportDisconnected();
+    setRunning(false);
+    for (auto* device : catalog.getDevices()) {
+        if (device) device->discardPendingSynchronization();
+    }
+}
 
 void DeviceManager::endProtocolSession()
 {
     setRunning(false);
     const bool sent = protocolClient.bye();
+    if (linkControl) linkControl->stopWireless(); // Physical loss also reaches Board if BYE enqueue fails.
     for (auto *device : catalog.getDevices()) {
         if (device) device->setPinConnectionActive(false);
     }
@@ -501,6 +513,7 @@ bool DeviceManager::reconnectProtocolLink()
             return false;
         }
     }
+    setRunning(false);
     // Selection may have no connected device yet: successful INIT restores the link.
     return protocolClient.completeLinkReconnect();
 }

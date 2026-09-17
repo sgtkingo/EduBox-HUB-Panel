@@ -80,6 +80,11 @@ public:
     }
     void stopCommunication() { lost = true; }
     void invalidateInitialization() { initRequired = true; monitoring = false; }
+    void notifyTransportDisconnected() {
+        client.closeSession();
+        initRequired = true; monitoring = false;
+        if (!closedLocally) lost = true;
+    }
     const char* apiVersion() const { return client.apiVersion(); }
 
     vscp::ResponseStatus init(const vscp::String& application = "", const vscp::String& database = "") {

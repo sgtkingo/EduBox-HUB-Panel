@@ -1543,7 +1543,8 @@ void SignalsVisualizationGui::showVisualization()
 bool SignalsVisualizationGui::reconnectAfterDisconnect()
 {
     if (!deviceManager.reconnectDevice(currentDevice)) return false;
-    paused = settingsPanel.isVisible();
+    // Reconnect restores pins, never automatically replay cached actuator control.
+    paused = true;
     toolbarPanel.setPaused(paused);
     deviceManager.setRunning(!paused);
     updateChart(true);

@@ -1,0 +1,29 @@
+name: Bluetooth bridge validation
+on:
+  push:
+    branches: [bluetooth_bridge]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ble-panel-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  native:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - run: python libraries/vscp/tests/run_tests.py
+      - run: python libraries/edubox-ble/tests/run_tests.py
+      - run: python -m unittest discover -s libraries/engine/tests
+  firmware:
+    uses: ./.github/workflows/build.yml
+    with:
+      ref: bluetooth_bridge
+      artifact_name: panel-bluetooth-bridge
+      run_sync: false
+      run_db_sync: false
+      run_version_sync: false

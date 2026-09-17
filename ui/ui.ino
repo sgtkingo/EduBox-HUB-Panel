@@ -11,6 +11,7 @@
 #include <vscp.hpp>
 #include <engine.hpp>  // include engine header
 #include "vscp_panel_log_sink.hpp"
+#include "panel_protocol_link.hpp"
 #include <esp_timer.h>
 #include <atomic>
 
@@ -155,7 +156,12 @@ DeviceBrowserState deviceBrowserState(deviceCatalog); // Shared browse/highlight
 HardwareSerial vscpSerial(EDUBOX_HUB_PANEL_VSCP_UART_PORT); // Physical UART owned and configured by the application
 PanelVscpLogSink vscpLogSink;
 vscp::StreamTransport vscpTransport(vscpSerial, vscp::MAX_MESSAGE_SIZE, &vscpLogSink); // Transport only frames lines; it does not own the UART
-vscp::Client vscpClient(vscpTransport); // Shared VSCP protocol client
+edubox::ble::Channel bleChannel;
+edubox::ble::Transport bleTransport(bleChannel);
+edubox::ble::Central bleBridge(bleChannel);
+SelectedProtocolTransport selectedTransport(vscpTransport);
+vscp::Client vscpClient(selectedTransport); // One protocol owner, selected physical link
+PanelProtocolLink protocolLink(vscpClient, vscpTransport, selectedTransport, bleChannel, bleTransport, bleBridge);
 DeviceManager deviceManager(deviceCatalog, vscpClient);  // Runtime device manager over the shared catalog
 DeviceVisualizationSession deviceVisualizationSession; // Active visualization session over selected runtime devices
 DataBundleManager dataBundleManager; // Create DataBundleManager instance
@@ -191,6 +197,8 @@ void setup ()
         SERIAL_8N1,
         EDUBOX_HUB_PANEL_VSCP_UART_RX,
         EDUBOX_HUB_PANEL_VSCP_UART_TX);
+    deviceManager.setProtocolLinkControl(protocolLink);
+    bleBridge.begin();
 
     //Init Display
     lcd.begin();
@@ -261,6 +269,7 @@ void setup ()
 
 void loop ()
 {
+    if (protocolLink.service()) deviceManager.notifyProtocolTransportDisconnected();
     vscpClient.poll();
 #if ALLOW_PING_INTERRUPT
     if (!linkWatchdogTimerReady || linkWatchdogDue.exchange(false, std::memory_order_acquire)) {
