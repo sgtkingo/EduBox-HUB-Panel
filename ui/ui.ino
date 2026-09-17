@@ -236,6 +236,7 @@ void setup ()
 
 void loop ()
 {
+    vscpClient.poll();
     // Redraw GUI based on current state
     guiManager.redraw();
 }
