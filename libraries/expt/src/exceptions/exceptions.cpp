@@ -69,11 +69,13 @@ std::string Exception::flush(int level) const {
 }
 
 void Exception::print() const {
-    std::string message = flush(0);
     if (Code == ErrorCode::CRITICAL_ERROR_CODE) {
         // For critical errors, splash the message as well
+        std::string message = flush(0);
         splashMessage("%s", message.c_str());
     }
-    // Always log the message
-    logMessage("%s", message.c_str());
+    for (const Exception* current = this; current; current = current->innerException) {
+        debugLogMessage(DEBUG_VERBOSE_ERRORS, current->Source.c_str(), "exception",
+                        "EXCEPTION: %s", current->Message.c_str());
+    }
 }

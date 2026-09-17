@@ -1,4 +1,4 @@
-"""Debug is off by default; regular logging on the shared UART still works."""
+"""Debug levels control diagnostics and exceptions, preserving critical GUI errors."""
 from pathlib import Path
 import subprocess
 import tempfile
@@ -28,16 +28,31 @@ extern SerialMock Serial;
             (root / "main.cpp").write_text(r'''
 #include "Arduino.h"
 #include "logs.hpp"
+#include "exceptions.hpp"
 #include <cassert>
-static_assert(ENABLE_DEBUG == EXPECT_DEBUG);
+static_assert(ENABLE_DEBUG == EXPECT_SWITCH);
 SerialMock Serial;
+int splashCount = 0;
+void splashMessage(const char*, ...) { ++splashCount; }
 int main() {
     initLogger();
     assert(Serial.started);
+    Exception ex("BaseDevice::connect", "Response UID mismatch?\nnext", ErrorCode::CRITICAL_ERROR_CODE,
+                 new Exception("inner", "detail"));
+    ex.print();
+    assert(splashCount == 1);
     debugLogMessage(DEBUG_VERBOSE_ERRORS, "connect", "attempt", "INIT");
     debugLogMessage("connect", "attempt", "CONNECT");
 #if EXPECT_DEBUG
-    assert(Serial.output.find("DEBUG:") != std::string::npos);
+    assert(Serial.output.find("[DEBUG][connect]:") != std::string::npos);
+#else
+    assert(Serial.output.empty());
+#endif
+#if EXPECT_DEBUG
+    assert(Serial.output.find("[DEBUG][BaseDevice::connect]: EXCEPTION: Response UID mismatch? next") != std::string::npos);
+    assert(Serial.output.find("[DEBUG][inner]: EXCEPTION: detail") != std::string::npos);
+    assert((Serial.output.find("reason=attempt") != std::string::npos));
+    assert((Serial.output.find(": CONNECT") != std::string::npos) == (DEBUG_VERBOSE_LEVEL >= 3));
 #else
     assert(Serial.output.empty());
 #endif
@@ -53,14 +68,17 @@ int main() {
     assert(Serial.output.find("buffered marker") != std::string::npos);
 }
 ''')
-            for debug, flags in [(0, []), (1, ["-DENABLE_DEBUG=1"])]:
+            (root / "lvgl.h").write_text("#pragma once\n#include <cstdint>\ntypedef struct lv_event_t lv_event_t;\n")
+            for debug, level in [(0, 3), (1, 0), (1, 1), (1, 2), (1, 3)]:
+                flags = [f"-DENABLE_DEBUG={debug}", f"-DDEBUG_VERBOSE_LEVEL={level}"]
                 with self.subTest(debug=debug):
                     executable = root / f"debug_{debug}.exe"
                     subprocess.run([
                         "g++", "-std=c++17", "-DARDUINO=10819", "-DESP32",
-                        "-DARDUINO_USB_CDC_ON_BOOT=0", f"-DEXPECT_DEBUG={debug}",
+                        "-DARDUINO_USB_CDC_ON_BOOT=0", f"-DEXPECT_DEBUG={int(debug and level > 0)}", f"-DEXPECT_SWITCH={debug}",
                         *flags, "-I", str(root), "-I", str(LOGGER.parent),
-                        str(LOGGER), str(root / "main.cpp"), "-o", str(executable),
+                        str(LOGGER), str(LOGGER.parent.parent / "exceptions/exceptions.cpp"),
+                        "-I", str(LOGGER.parent.parent / "exceptions"), str(root / "main.cpp"), "-o", str(executable),
                     ], check=True)
                     subprocess.run([str(executable)], check=True)
 

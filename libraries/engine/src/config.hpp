@@ -28,15 +28,15 @@
 // Uncomment to enable ESP32 platform
 //#define ESP_PLATFORM
 
-// Unified project debug logging switch. Exceptions are printed by their catch handlers.
+// Unified project debug logging switch. Exceptions use error level 1.
 #ifndef ENABLE_DEBUG
 #define ENABLE_DEBUG 0
 #endif
 
 // Debug verbosity:
-// 1 = errors only, 2 = warnings and important operations, 3 = all debug details.
+// 0 = disabled, 1 = errors only, 2 = warnings and important operations, 3 = all debug details.
 #ifndef DEBUG_VERBOSE_LEVEL
-#define DEBUG_VERBOSE_LEVEL 3
+#define DEBUG_VERBOSE_LEVEL 0
 #endif
 
 // Application-owned UART wiring for the injected VSCP transport.
@@ -128,7 +128,7 @@
 // support in the Arduino board configuration. Keep USB CDC enabled on boot if
 // the same connector is also used as the runtime UART/log channel.
 #ifndef FILE_TRANSFER_USB_MSC_ENABLED
-#define FILE_TRANSFER_USB_MSC_ENABLED 1
+#define FILE_TRANSFER_USB_MSC_ENABLED 0
 #endif
 
 #ifndef FILE_TRANSFER_USB_MSC_VENDOR_ID

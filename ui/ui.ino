@@ -10,6 +10,7 @@
 #include <expt.hpp>
 #include <vscp.hpp>
 #include <engine.hpp>  // include engine header
+#include "vscp_panel_log_sink.hpp"
 
 /*Don't forget to set Sketchbook location in File/Preferences to the path of your UI project (the parent foder of this INO file)*/
 
@@ -103,7 +104,7 @@ static lv_color_t buf [screenWidth * screenHeight / LVGL_BUFFER_RATIO];
 /* Serial debugging */
 void my_print (const char * buf)
 {
-    logMessage("%s", buf);
+    debugLogMessage(DEBUG_VERBOSE_ALL, "LVGL", "GUI", "%s", buf);
 }
 #endif
 
@@ -150,7 +151,8 @@ void my_touchpad_read (lv_indev_drv_t * indev_driver, lv_indev_data_t * data)
 DeviceCatalog deviceCatalog; // Shared device catalog initialized from JSON DB on boot
 DeviceBrowserState deviceBrowserState(deviceCatalog); // Shared browse/highlight state for catalog screens
 HardwareSerial vscpSerial(EDUBOX_HUB_PANEL_VSCP_UART_PORT); // Physical UART owned and configured by the application
-vscp::StreamTransport vscpTransport(vscpSerial); // Transport only frames lines; it does not own the UART
+PanelVscpLogSink vscpLogSink;
+vscp::StreamTransport vscpTransport(vscpSerial, vscp::MAX_MESSAGE_SIZE, &vscpLogSink); // Transport only frames lines; it does not own the UART
 vscp::Client vscpClient(vscpTransport); // Shared VSCP protocol client
 DeviceManager deviceManager(deviceCatalog, vscpClient);  // Runtime device manager over the shared catalog
 DeviceVisualizationSession deviceVisualizationSession; // Active visualization session over selected runtime devices
@@ -229,7 +231,7 @@ void setup ()
     router().showMainMenu();
     
     //splashMessage("Hello from Elecrow DIS08070H!");
-    Serial.println( "Setup done" );
+    debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "setup", "init", "Setup done");
 }
 
 void loop ()

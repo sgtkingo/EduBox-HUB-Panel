@@ -23,7 +23,7 @@
 
 #ifndef PROTOCOL_VERBOSE
 // 0 = disabled, 1 = transport errors, 2 = errors and complete RX/TX frames.
-#define PROTOCOL_VERBOSE 1
+#define PROTOCOL_VERBOSE 0
 #endif
 
 #if !defined(ARDUINO_H_ENV) && !defined(STDIO_H_ENV)

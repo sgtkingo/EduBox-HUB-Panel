@@ -1343,31 +1343,31 @@ public:
      */
     void print() const
     {
-        logMessage("Device UID: %s\n", UID.c_str());
-        logMessage("\tDevice Type: %s\n", Type.c_str());
-        logMessage("\tDevice Description: %s\n", Description.c_str());
-        logMessage("\tDevice Status: %d\n", Status);
-        logMessage("\tDevice Error: %s\n", getError().c_str());
-        logMessage("\tDevice Picture: %s\n", Picture.c_str());
-        logMessage("\tDevice Configurations:\n");
+        debugLogMessage(DEBUG_VERBOSE_ALL, "BaseDevice::print", "device details", "Device UID: %s\n", UID.c_str());
+        debugLogMessage(DEBUG_VERBOSE_ALL, "BaseDevice::print", "device details", "\tDevice Type: %s\n", Type.c_str());
+        debugLogMessage(DEBUG_VERBOSE_ALL, "BaseDevice::print", "device details", "\tDevice Description: %s\n", Description.c_str());
+        debugLogMessage(DEBUG_VERBOSE_ALL, "BaseDevice::print", "device details", "\tDevice Status: %d\n", Status);
+        debugLogMessage(DEBUG_VERBOSE_ALL, "BaseDevice::print", "device details", "\tDevice Error: %s\n", getError().c_str());
+        debugLogMessage(DEBUG_VERBOSE_ALL, "BaseDevice::print", "device details", "\tDevice Picture: %s\n", Picture.c_str());
+        debugLogMessage(DEBUG_VERBOSE_ALL, "BaseDevice::print", "device details", "\tDevice Configurations:\n");
         for (auto &c : Configs)
         {
-            logMessage("\t\t%s: %s %s\n", c.first.c_str(), c.second.Value.c_str(), c.second.Unit.c_str());
+            debugLogMessage(DEBUG_VERBOSE_ALL, "BaseDevice::print", "device details", "\t\t%s: %s %s\n", c.first.c_str(), c.second.Value.c_str(), c.second.Unit.c_str());
         }
-        logMessage("\tDevice Values:\n");
+        debugLogMessage(DEBUG_VERBOSE_ALL, "BaseDevice::print", "device details", "\tDevice Values:\n");
         for (auto &v : Values)
         {
-            logMessage("\t\t%s: %s %s\n", v.first.c_str(), v.second.Value.c_str(), v.second.Unit.c_str());
+            debugLogMessage(DEBUG_VERBOSE_ALL, "BaseDevice::print", "device details", "\t\t%s: %s %s\n", v.first.c_str(), v.second.Value.c_str(), v.second.Unit.c_str());
         }
-        logMessage("\tDevice Pins: %s\n", getPins().c_str());
+        debugLogMessage(DEBUG_VERBOSE_ALL, "BaseDevice::print", "device details", "\tDevice Pins: %s\n", getPins().c_str());
         if (!PinDefinitions.empty()) {
-            logMessage("\tDevice Pin Map:\n");
+            debugLogMessage(DEBUG_VERBOSE_ALL, "BaseDevice::print", "device details", "\tDevice Pin Map:\n");
             for (const std::string &tag : PinDefinitions) {
                 auto it = PinAssignments.find(tag);
-                logMessage("\t\t%s: %s\n", tag.c_str(), it == PinAssignments.end() ? "-" : it->second.c_str());
+                debugLogMessage(DEBUG_VERBOSE_ALL, "BaseDevice::print", "device details", "\t\t%s: %s\n", tag.c_str(), it == PinAssignments.end() ? "-" : it->second.c_str());
             }
         }
-        logMessage("**************************************\n");
+        debugLogMessage(DEBUG_VERBOSE_ALL, "BaseDevice::print", "device details", "**************************************\n");
     }
 
     /**

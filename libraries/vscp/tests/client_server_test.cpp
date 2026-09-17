@@ -39,6 +39,15 @@ private:
 }  // namespace
 
 int main() {
+  // Parameter order is irrelevant to Panel response parsing.
+  for (const auto& frame : {"?api=1.4&status=1", "?status=1&api=1.4",
+                            "?id=S01&status=1", "?status=1&id=S01"}) {
+    vscp::ResponseStatus response;
+    vscp::String error;
+    assert(vscp::Codec::parseResponse(frame, response, error));
+    assert(response.status == vscp::Status::Ok);
+    assert(error.empty());
+  }
   const vscp::String initRequest = vscp::Codec::buildRequest(
       vscp::Command::Init,
       vscp::Parameters{{"api", vscp::API_VERSION}, {"app", "signal-twin"}});

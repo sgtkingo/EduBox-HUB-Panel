@@ -65,6 +65,24 @@ vscp::StdioTransport stdioTransport(
 
 The sink can also be changed at runtime with `Transport::setLogSink()`.
 
+The Panel injects `PanelVscpLogSink`, which forwards diagnostics to its logger
+only with `ENABLE_DEBUG=1`, `DEBUG_VERBOSE_LEVEL=3` and `PROTOCOL_VERBOSE=2`.
+All Panel diagnostics start with `[DEBUG][<SOURCE>]:`; exceptions use level 1.
+Carriage returns and newlines in payloads become spaces so each diagnostic stays
+on one prefixed line; protocol question marks are retained. Frames retain their `?`
+and parameter contents, including invalid incoming lines that fail parsing.
+These are printable frames after transport normalization, not a byte dump;
+the application logger limits each output line to 255 characters.
+With a USB-to-UART0 bridge, keep **USB CDC On Boot disabled** (CLI:
+`CDCOnBoot=default`) and open the bridge port in Serial Monitor. RX/TX traces
+are enabled even when logger and protocol share UART0. The Board also receives
+these diagnostic lines: if it treats them as protocol requests, its extra error
+responses can interfere with INIT or cause a missing response UID. For hardware
+with a separate native USB connection, `CDCOnBoot=cdc` moves Serial logging to
+that USB console and keeps diagnostics off the protocol UART0.
+Response parameter order is irrelevant: `?api=1.4&status=1` and
+`?status=1&api=1.4` both parse successfully.
+
 Before dispatch, the common transport removes bytes outside printable ASCII
 (`32..126`) and trims surrounding whitespace on both RX and TX. The Arduino
 stream adapter also emits a separator newline and flushes each complete frame,

@@ -126,7 +126,7 @@ static int clampDebugVerboseLevel(int level) {
 }
 
 static bool isDebugLevelEnabled(int level) {
-#if ENABLE_DEBUG
+#if ENABLE_DEBUG && DEBUG_VERBOSE_LEVEL > 0
     return clampDebugVerboseLevel(level) <= clampDebugVerboseLevel(DEBUG_VERBOSE_LEVEL);
 #else
     (void)level;
@@ -140,7 +140,7 @@ static void sanitizeDebugPayload(char *buffer) {
     }
 
     for (size_t i = 0; buffer[i] != '\0'; ++i) {
-        if (buffer[i] == '?' || buffer[i] == '\r' || buffer[i] == '\n') {
+        if (buffer[i] == '\r' || buffer[i] == '\n') {
             buffer[i] = ' ';
         }
     }
@@ -157,10 +157,10 @@ static void debugLogMessageVa(int level, const char *source, const char *reason,
     sanitizeDebugPayload(buffer);
 
     logMessage(
-        "DEBUG: %s reason=%s source=%s",
+        "[DEBUG][%s]: %s reason=%s",
+        source ? source : "unknown",
         buffer,
-        reason ? reason : "-",
-        source ? source : "unknown");
+        reason ? reason : "-");
 #else
     (void)level;
     (void)source;

@@ -48,7 +48,7 @@
  /**
   * @brief Logs a formatted debug message when ENABLE_DEBUG is enabled.
   *
-  * Output format: DEBUG: <message> reason=<reason> source=<source>
+  * Output format: [DEBUG][<source>]: <message> reason=<reason>
   */
  void debugLogMessage(int level, const char *source, const char *reason, const char *format, ...);
  void debugLogMessage(const char *source, const char *reason, const char *format, ...);

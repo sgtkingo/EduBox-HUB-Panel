@@ -89,7 +89,7 @@ static void on_splash_msgbox_event(void* e)
 }
 
 void show_splash_popup(const char* title, const char* text, uint32_t autoclose_ms) {
-  logMessage("Splash Popup: %s - %s", title, text);
+  debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "splashMessage", "popup", "%s - %s", title, text);
 }
 
 #endif // USE_LVGL
