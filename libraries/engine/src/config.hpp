@@ -62,7 +62,7 @@
 
 // Firmware version mirrored from the root VERSION file by storage/sync_version.py.
 #ifndef EDUBOX_HUB_PANEL_FIRMWARE_VERSION
-#define EDUBOX_HUB_PANEL_FIRMWARE_VERSION "1.2.1.2"
+#define EDUBOX_HUB_PANEL_FIRMWARE_VERSION "1.2.2.0"
 #endif
 
 // Storage backend selection for all persistent data access.
