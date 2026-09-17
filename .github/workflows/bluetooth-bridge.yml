@@ -22,7 +22,7 @@ jobs:
   firmware:
     uses: ./.github/workflows/build.yml
     with:
-      ref: bluetooth_bridge
+      ref: ${{ github.sha }}
       artifact_name: panel-bluetooth-bridge
       run_sync: false
       run_db_sync: false

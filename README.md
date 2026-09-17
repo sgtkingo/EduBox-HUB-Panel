@@ -173,6 +173,24 @@ Contributions are welcome, especially:
 
 ---
 
+## Bluetooth bridge (bluetooth_bridge branch)
+
+Communication now supports UART or secure Bluetooth LE to an EduBox Board.
+Wireless scans Boards, accepts a six-digit commissioning PIN from the Board
+console and remembers the authenticated peer in NVS. BLE runs outside the GUI
+task; only the main loop owns VSCP and LVGL. Radio reconnection alone never
+restores Run or replays pending CONFIG/CONTROL.
+
+Install ESP32 core 3.1.1 and NimBLE-Arduino 2.5.1. On PowerShell:
+`scripts/build_bluetooth_bridge.ps1 -ArduinoCli arduino-cli -Jobs 4`.
+This builds the existing ESP32-S3/OPI PSRAM/4 MB huge_app profile without upload.
+The script and branch CI enforce Secure Connections (no legacy pairing) on both
+C and C++ compilation. Do not omit these flags when building in another IDE.
+
+See [the complete guide and HW checklist](https://github.com/sgtkingo/EduBox-HUB/blob/bluetooth_bridge/docs/BLUETOOTH_BRIDGE.md).
+Native tests and successful builds do not verify radio, touchscreen coexistence
+or physical actuator shutdown.
+
 ## 📄 License
 
 MIT — see [`LICENCE`](LICENCE).

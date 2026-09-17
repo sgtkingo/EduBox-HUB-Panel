@@ -52,9 +52,9 @@ void CommunicationSelectionGui::createWirelessManualButton(lv_coord_t x, lv_coor
     lv_obj_t *button = lv_btn_create(ui_Widget);
     lv_obj_set_size(button, 58, 80);
     lv_obj_set_pos(button, x, y);
-    lv_obj_set_style_bg_color(button, lv_color_hex(0x8A8F98), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_color(button, lv_color_hex(0x8A8F98), LV_PART_MAIN | LV_STATE_PRESSED);
-    lv_obj_set_style_bg_opa(button, 180, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(button, lv_color_hex(0x033E70), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(button, lv_color_hex(0x044C86), LV_PART_MAIN | LV_STATE_PRESSED);
+    lv_obj_set_style_bg_opa(button, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_user_data(button, reinterpret_cast<void *>(static_cast<intptr_t>(DefaultCommunicationMode::WIRELESS_MANUAL)));
     lv_obj_add_event_cb(button, [](lv_event_t *e) {
         if (lv_event_get_code(e) != LV_EVENT_CLICKED) {
@@ -280,7 +280,7 @@ void CommunicationSelectionGui::showWireless(bool remembered)
         lv_obj_center(wirelessPanel);
         lv_obj_set_style_bg_color(wirelessPanel, lv_color_hex(0xFFFFFF), 0);
         lv_obj_t* title = lv_label_create(wirelessPanel);
-        lv_label_set_text(title, "EduBox Board — Bluetooth LE");
+        lv_label_set_text(title, "EduBox Board - Bluetooth LE");
         lv_obj_set_pos(title, 12, 4);
         wirelessStatus = lv_label_create(wirelessPanel);
         lv_obj_set_width(wirelessStatus, 670); lv_obj_set_pos(wirelessStatus, 12, 34);
