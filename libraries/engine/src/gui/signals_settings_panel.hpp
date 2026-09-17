@@ -8,6 +8,8 @@
 class SignalsSettingsPanel
 {
 private:
+    uint32_t primaryColor = 0x009BFF;
+    uint32_t secondaryColor = 0xFF6B35;
     lv_obj_t *ui_SettingsOverlay = nullptr;
     lv_obj_t *ui_SettingsBridgeGroup = nullptr;
     lv_obj_t *ui_SettingsBridge = nullptr;
@@ -53,7 +55,10 @@ public:
     void updateChartValueBlocks(const std::vector<std::string> &chartValueKeys,
                                 const std::vector<std::string> &selectedChartValueKeys);
 
+    void configureSeriesColors(uint32_t primary, uint32_t secondary, void *userData, lv_event_cb_t callback);
     void hide();
+    void configureScaleMode(bool manual, void *userData,
+                            lv_event_cb_t modeCallback, lv_event_cb_t manualCallback);
 };
 
 #endif

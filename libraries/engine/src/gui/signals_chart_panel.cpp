@@ -337,3 +337,13 @@ void SignalsChartPanel::resetToZero()
     lv_chart_set_all_value(chart, secondarySeries, 0);
     refresh();
 }
+
+void SignalsChartPanel::setSeriesColors(uint32_t primary, uint32_t secondary)
+{
+    if (!isReady()) return;
+    lv_chart_set_series_color(chart, primarySeries, lv_color_hex(primary));
+    lv_chart_set_series_color(chart, secondarySeries, lv_color_hex(secondary));
+    if (scalingLabel) lv_obj_set_style_text_color(scalingLabel, lv_color_hex(primary), LV_PART_MAIN);
+    if (secondaryScalingLabel) lv_obj_set_style_text_color(secondaryScalingLabel, lv_color_hex(secondary), LV_PART_MAIN);
+    refresh();
+}

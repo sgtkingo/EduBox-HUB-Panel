@@ -23,6 +23,7 @@
 
 #include "gui_router.hpp"
 #include "signals_chart_panel.hpp"
+#include "signals_manual_scale_panel.hpp"
 #include "signals_feedback_panel.hpp"
 #include "signals_list_panel.hpp"
 #include "signals_settings_panel.hpp"
@@ -67,6 +68,21 @@ private:
     bool paused = false;      ///< Pause state flag
     bool recording = false;   ///< Recording state flag
     bool showingConfigPanel = false;
+    uint8_t primaryColorIndex = 0;
+    uint8_t secondaryColorIndex = 1;
+    void refreshSeriesColors();
+    static void handleSeriesColorEvent(lv_event_t *event);
+    bool manualScaleEnabled = false;
+    bool manualScaleConfigured = false;
+    ChartManualScale manualScale;
+    SignalsManualScalePanel manualScalePanel;
+    double autoYMin = -1.0;
+    double autoYMax = 1.0;
+    void setManualScaleEnabled(bool enabled);
+    void showManualScalePanel();
+    void refreshScaleModeControls();
+    static void handleScaleModeEvent(lv_event_t *event);
+    static void handleManualScaleEvent(lv_event_t *event);
     int chartHistoryOffset = 0;
     int chartDragAccumulatorPx = 0;
     int chartVisibleSampleCount = HISTORY_CAP;
@@ -267,13 +283,13 @@ private:
     std::vector<std::string> getActiveChartValueKeys();
     void ensureActiveChartValueKeys();
     void toggleChartValueSelection(size_t valueIndex);
-    static std::string buildChartScalingText(const std::string &chartKey,
+    std::string buildChartScalingText(const std::string &chartKey,
                                              const std::unordered_map<std::string, DeviceParam> &values);
     void showEmptyChartState(const char *message);
     void hideEmptyChartState();
     static std::pair<double, double> computeChartRange(const double *history);
     static std::pair<double, double> computeChartRange(const double *history, int sampleCount);
-    static void mapHistoryToPlot(const double *rawHistory, lv_coord_t *plotHistory, int sampleCount, double minValue, double maxValue);
+    void mapHistoryToPlot(const double *rawHistory, lv_coord_t *plotHistory, int sampleCount, double minValue, double maxValue);
     int getMaxChartHistoryOffset(const std::vector<std::string> &chartKeys) const;
     void panChartHistory(int steps);
     void adjustChartVisibleSamples(int deltaSamples);
@@ -416,7 +432,7 @@ public:
     /**
      * @brief Hide settings panel
      */
-    void hideSettingsPanel();
+    void hideSettingsPanel(bool resume = true);
 
     /**
      * @brief Show the device visualization screen

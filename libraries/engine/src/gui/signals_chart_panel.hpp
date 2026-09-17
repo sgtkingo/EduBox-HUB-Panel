@@ -58,6 +58,7 @@ public:
                   double secondaryMinValue,
                   double secondaryMaxValue,
                   bool hasSecondarySeries);
+    void setSeriesColors(uint32_t primary, uint32_t secondary);
     void clearSeries();
     void populatePrimarySeries(const lv_coord_t *history, int sampleCount);
     void populateSecondarySeries(const lv_coord_t *history, int sampleCount);

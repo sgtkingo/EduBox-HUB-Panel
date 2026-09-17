@@ -43,7 +43,7 @@ void SignalsSettingsPanel::show(lv_obj_t *parentWidget,
     ui_SettingsBridgeGroup = lv_obj_create(parentWidget);
     lv_obj_remove_style_all(ui_SettingsBridgeGroup);
     lv_obj_set_width(ui_SettingsBridgeGroup, 250);
-    lv_obj_set_height(ui_SettingsBridgeGroup, 379);
+    lv_obj_set_height(ui_SettingsBridgeGroup, 395);
     lv_obj_set_x(ui_SettingsBridgeGroup, -7);
     lv_obj_set_y(ui_SettingsBridgeGroup, 25);
     lv_obj_set_align(ui_SettingsBridgeGroup, LV_ALIGN_TOP_RIGHT);
@@ -76,7 +76,7 @@ void SignalsSettingsPanel::show(lv_obj_t *parentWidget,
     ui_SettingsGroup = lv_obj_create(ui_SettingsOverlay);
     lv_obj_remove_style_all(ui_SettingsGroup);
     lv_obj_set_width(ui_SettingsGroup, 250);
-    lv_obj_set_height(ui_SettingsGroup, 379);
+    lv_obj_set_height(ui_SettingsGroup, 395);
     lv_obj_set_x(ui_SettingsGroup, -7);
     lv_obj_set_y(ui_SettingsGroup, 25);
     lv_obj_set_align(ui_SettingsGroup, LV_ALIGN_TOP_RIGHT);
@@ -86,7 +86,7 @@ void SignalsSettingsPanel::show(lv_obj_t *parentWidget,
     ui_SettingsOutlay = lv_obj_create(ui_SettingsGroup);
     lv_obj_remove_style_all(ui_SettingsOutlay);
     lv_obj_set_width(ui_SettingsOutlay, 250);
-    lv_obj_set_height(ui_SettingsOutlay, 354);
+    lv_obj_set_height(ui_SettingsOutlay, 370);
     lv_obj_set_align(ui_SettingsOutlay, LV_ALIGN_BOTTOM_MID);
     lv_obj_clear_flag(ui_SettingsOutlay, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_style_radius(ui_SettingsOutlay, 10, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -124,41 +124,43 @@ void SignalsSettingsPanel::show(lv_obj_t *parentWidget,
     lv_label_set_text(ui_SettingsScaleModeLabel, "Scale mode:");
     lv_obj_set_style_text_color(ui_SettingsScaleModeLabel, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    ui_SettingsScaleModeValueLabel = lv_label_create(ui_SettingsGroup);
-    lv_obj_set_width(ui_SettingsScaleModeValueLabel, LV_SIZE_CONTENT);
-    lv_obj_set_height(ui_SettingsScaleModeValueLabel, LV_SIZE_CONTENT);
+    ui_SettingsScaleModeValueLabel = lv_dropdown_create(ui_SettingsGroup);
+    lv_obj_set_width(ui_SettingsScaleModeValueLabel, 105);
+    lv_obj_set_height(ui_SettingsScaleModeValueLabel, 30);
     lv_obj_set_x(ui_SettingsScaleModeValueLabel, -20);
-    lv_obj_set_y(ui_SettingsScaleModeValueLabel, 72);
+    lv_obj_set_y(ui_SettingsScaleModeValueLabel, 64);
     lv_obj_set_align(ui_SettingsScaleModeValueLabel, LV_ALIGN_TOP_RIGHT);
-    lv_label_set_text(ui_SettingsScaleModeValueLabel, "Auto");
+    lv_dropdown_set_options(ui_SettingsScaleModeValueLabel, "Auto\nManual");
     lv_obj_set_style_text_color(ui_SettingsScaleModeValueLabel, lv_color_hex(0x009BFF), LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_SettingsSeriesColorLabel = lv_label_create(ui_SettingsGroup);
     lv_obj_set_width(ui_SettingsSeriesColorLabel, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_SettingsSeriesColorLabel, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_SettingsSeriesColorLabel, 10);
-    lv_obj_set_y(ui_SettingsSeriesColorLabel, 96);
+    lv_obj_set_y(ui_SettingsSeriesColorLabel, 134);
     lv_label_set_text(ui_SettingsSeriesColorLabel, "Line colors:");
     lv_obj_set_style_text_color(ui_SettingsSeriesColorLabel, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_SettingsPrimarySwatch = lv_obj_create(ui_SettingsGroup);
     lv_obj_remove_style_all(ui_SettingsPrimarySwatch);
-    lv_obj_set_size(ui_SettingsPrimarySwatch, 28, 16);
-    lv_obj_set_x(ui_SettingsPrimarySwatch, -58);
-    lv_obj_set_y(ui_SettingsPrimarySwatch, 96);
+    lv_obj_set_size(ui_SettingsPrimarySwatch, 42, 24);
+    lv_obj_set_x(ui_SettingsPrimarySwatch, -72);
+    lv_obj_set_y(ui_SettingsPrimarySwatch, 130);
     lv_obj_set_align(ui_SettingsPrimarySwatch, LV_ALIGN_TOP_RIGHT);
-    lv_obj_clear_flag(ui_SettingsPrimarySwatch, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(ui_SettingsPrimarySwatch, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(ui_SettingsPrimarySwatch, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_set_style_radius(ui_SettingsPrimarySwatch, 4, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_color(ui_SettingsPrimarySwatch, lv_color_hex(0x009BFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(ui_SettingsPrimarySwatch, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_SettingsSecondarySwatch = lv_obj_create(ui_SettingsGroup);
     lv_obj_remove_style_all(ui_SettingsSecondarySwatch);
-    lv_obj_set_size(ui_SettingsSecondarySwatch, 28, 16);
+    lv_obj_set_size(ui_SettingsSecondarySwatch, 42, 24);
     lv_obj_set_x(ui_SettingsSecondarySwatch, -20);
-    lv_obj_set_y(ui_SettingsSecondarySwatch, 96);
+    lv_obj_set_y(ui_SettingsSecondarySwatch, 130);
     lv_obj_set_align(ui_SettingsSecondarySwatch, LV_ALIGN_TOP_RIGHT);
-    lv_obj_clear_flag(ui_SettingsSecondarySwatch, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_clear_flag(ui_SettingsSecondarySwatch, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(ui_SettingsSecondarySwatch, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_set_style_radius(ui_SettingsSecondarySwatch, 4, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_color(ui_SettingsSecondarySwatch, lv_color_hex(0xFF6B35), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(ui_SettingsSecondarySwatch, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -167,7 +169,7 @@ void SignalsSettingsPanel::show(lv_obj_t *parentWidget,
     lv_obj_set_width(ui_SettingsGraphValuesLabel, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_SettingsGraphValuesLabel, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_SettingsGraphValuesLabel, 10);
-    lv_obj_set_y(ui_SettingsGraphValuesLabel, 124);
+    lv_obj_set_y(ui_SettingsGraphValuesLabel, 164);
     lv_label_set_text(ui_SettingsGraphValuesLabel, "Graph values:");
     lv_obj_set_style_text_color(ui_SettingsGraphValuesLabel, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
 
@@ -178,7 +180,7 @@ void SignalsSettingsPanel::show(lv_obj_t *parentWidget,
         lv_obj_t *block = lv_btn_create(ui_SettingsGroup);
         lv_obj_set_size(block, 96, 24);
         lv_obj_set_x(block, 17 + static_cast<int>(i % 2) * 106);
-        lv_obj_set_y(block, 148 + static_cast<int>(i / 2) * 30);
+        lv_obj_set_y(block, 188 + static_cast<int>(i / 2) * 30);
         lv_obj_clear_flag(block, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_set_style_radius(block, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_user_data(block, reinterpret_cast<void *>(static_cast<intptr_t>(i)));
@@ -203,12 +205,12 @@ void SignalsSettingsPanel::show(lv_obj_t *parentWidget,
     lv_obj_set_width(ui_SettingsManualScaleButton, 200);
     lv_obj_set_height(ui_SettingsManualScaleButton, 20);
     lv_obj_set_x(ui_SettingsManualScaleButton, 17);
-    lv_obj_set_y(ui_SettingsManualScaleButton, 214);
+    lv_obj_set_y(ui_SettingsManualScaleButton, 100);
     lv_obj_add_flag(ui_SettingsManualScaleButton, LV_OBJ_FLAG_SCROLL_ON_FOCUS);
     lv_obj_clear_flag(ui_SettingsManualScaleButton, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_state(ui_SettingsManualScaleButton, LV_STATE_DISABLED);
     lv_obj_set_style_radius(ui_SettingsManualScaleButton, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_color(ui_SettingsManualScaleButton, lv_color_hex(0xA8B3BF), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(ui_SettingsManualScaleButton, lv_color_hex(0x009BFF), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_bg_opa(ui_SettingsManualScaleButton, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     ui_SettingsManualScaleButtonLabel = lv_label_create(ui_SettingsManualScaleButton);
@@ -218,14 +220,14 @@ void SignalsSettingsPanel::show(lv_obj_t *parentWidget,
     lv_label_set_text(ui_SettingsManualScaleButtonLabel, "Manual Scale");
 
     ui_SettingsUpdatePeriodLabel = lv_label_create(ui_SettingsGroup);
-    lv_obj_set_pos(ui_SettingsUpdatePeriodLabel, 10, 242);
+    lv_obj_set_pos(ui_SettingsUpdatePeriodLabel, 10, 258);
     lv_obj_set_style_text_color(ui_SettingsUpdatePeriodLabel, lv_color_hex(0x000000), 0);
     lv_obj_set_style_text_font(ui_SettingsUpdatePeriodLabel, &lv_font_montserrat_14, 0);
     lv_label_set_text_fmt(ui_SettingsUpdatePeriodLabel, "Update period: %u ms", static_cast<unsigned>(updatePeriodMs));
 
     ui_SettingsUpdatePeriodSlider = lv_slider_create(ui_SettingsGroup);
     lv_obj_set_size(ui_SettingsUpdatePeriodSlider, 200, 12);
-    lv_obj_set_pos(ui_SettingsUpdatePeriodSlider, 25, 272);
+    lv_obj_set_pos(ui_SettingsUpdatePeriodSlider, 25, 288);
     lv_slider_set_range(ui_SettingsUpdatePeriodSlider,
                         VisualizationPollSchedule::MIN_PERIOD_MS,
                         VisualizationPollSchedule::MAX_PERIOD_MS);
@@ -238,11 +240,11 @@ void SignalsSettingsPanel::show(lv_obj_t *parentWidget,
     lv_obj_add_event_cb(ui_SettingsUpdatePeriodSlider, updatePeriodCallback, LV_EVENT_VALUE_CHANGED, userData);
 
     lv_obj_t *minimum = lv_label_create(ui_SettingsGroup);
-    lv_obj_set_pos(minimum, 17, 288);
+    lv_obj_set_pos(minimum, 17, 304);
     lv_obj_set_style_text_font(minimum, &lv_font_montserrat_10, 0);
     lv_label_set_text(minimum, "10 ms");
     lv_obj_t *maximum = lv_label_create(ui_SettingsGroup);
-    lv_obj_set_pos(maximum, 190, 288);
+    lv_obj_set_pos(maximum, 190, 304);
     lv_obj_set_style_text_font(maximum, &lv_font_montserrat_10, 0);
     lv_label_set_text(maximum, "1000 ms");
 
@@ -250,7 +252,7 @@ void SignalsSettingsPanel::show(lv_obj_t *parentWidget,
     lv_obj_set_width(ui_SettingsDataBundleLabel, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_SettingsDataBundleLabel, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_SettingsDataBundleLabel, 10);
-    lv_obj_set_y(ui_SettingsDataBundleLabel, 306);
+    lv_obj_set_y(ui_SettingsDataBundleLabel, 322);
     lv_label_set_text(ui_SettingsDataBundleLabel, "Data Bundles:");
     lv_obj_set_style_text_color(ui_SettingsDataBundleLabel, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
 
@@ -258,7 +260,7 @@ void SignalsSettingsPanel::show(lv_obj_t *parentWidget,
     lv_obj_set_width(ui_SettingsDataBundleCountLabel, LV_SIZE_CONTENT);
     lv_obj_set_height(ui_SettingsDataBundleCountLabel, LV_SIZE_CONTENT);
     lv_obj_set_x(ui_SettingsDataBundleCountLabel, -20);
-    lv_obj_set_y(ui_SettingsDataBundleCountLabel, 306);
+    lv_obj_set_y(ui_SettingsDataBundleCountLabel, 322);
     lv_obj_set_align(ui_SettingsDataBundleCountLabel, LV_ALIGN_TOP_RIGHT);
     const std::string bundleCountText = "[" + std::to_string(bundleAmount) + "/30]";
     lv_label_set_text(ui_SettingsDataBundleCountLabel, bundleCountText.c_str());
@@ -271,7 +273,7 @@ void SignalsSettingsPanel::show(lv_obj_t *parentWidget,
     lv_obj_set_width(ui_SettingsDataBundleShowButton, 200);
     lv_obj_set_height(ui_SettingsDataBundleShowButton, 20);
     lv_obj_set_x(ui_SettingsDataBundleShowButton, 17);
-    lv_obj_set_y(ui_SettingsDataBundleShowButton, 330);
+    lv_obj_set_y(ui_SettingsDataBundleShowButton, 346);
     lv_obj_add_flag(ui_SettingsDataBundleShowButton, LV_OBJ_FLAG_SCROLL_ON_FOCUS);
     lv_obj_clear_flag(ui_SettingsDataBundleShowButton, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_style_radius(ui_SettingsDataBundleShowButton, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -297,9 +299,9 @@ void SignalsSettingsPanel::updateChartValueBlocks(const std::vector<std::string>
         const int selectedSlot = selectedSlotForKey(selectedChartValueKeys, chartValueKeys[i]);
         uint32_t color = 0xA8B3BF;
         if (selectedSlot == 0) {
-            color = 0x009BFF;
+            color = primaryColor;
         } else if (selectedSlot == 1) {
-            color = 0xFF6B35;
+            color = secondaryColor;
         }
 
         lv_obj_set_style_bg_color(block, lv_color_hex(color), LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -341,4 +343,34 @@ void SignalsSettingsPanel::hide()
     ui_SettingsDataBundleShowButtonLabel = nullptr;
     ui_SettingsValueBlocks.clear();
     ui_SettingsValueBlockLabels.clear();
+}
+
+void SignalsSettingsPanel::configureScaleMode(bool manual, void *userData,
+                                             lv_event_cb_t modeCallback, lv_event_cb_t manualCallback)
+{
+    if (!ui_SettingsScaleModeValueLabel || !ui_SettingsManualScaleButton) return;
+    lv_dropdown_set_selected(ui_SettingsScaleModeValueLabel, manual ? 1 : 0);
+    if (manual) lv_obj_clear_state(ui_SettingsManualScaleButton, LV_STATE_DISABLED);
+    else lv_obj_add_state(ui_SettingsManualScaleButton, LV_STATE_DISABLED);
+    // configureScaleMode also refreshes state after toggling the mode.
+    lv_obj_remove_event_cb(ui_SettingsScaleModeValueLabel, modeCallback);
+    lv_obj_remove_event_cb(ui_SettingsManualScaleButton, manualCallback);
+    lv_obj_add_event_cb(ui_SettingsScaleModeValueLabel, modeCallback, LV_EVENT_VALUE_CHANGED, userData);
+    lv_obj_add_event_cb(ui_SettingsManualScaleButton, manualCallback, LV_EVENT_CLICKED, userData);
+}
+
+void SignalsSettingsPanel::configureSeriesColors(uint32_t primary, uint32_t secondary,
+                                                void *userData, lv_event_cb_t callback)
+{
+    primaryColor = primary;
+    secondaryColor = secondary;
+    if (!ui_SettingsPrimarySwatch || !ui_SettingsSecondarySwatch) return;
+    lv_obj_set_style_bg_color(ui_SettingsPrimarySwatch, lv_color_hex(primary), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(ui_SettingsSecondarySwatch, lv_color_hex(secondary), LV_PART_MAIN);
+    lv_obj_set_user_data(ui_SettingsPrimarySwatch, reinterpret_cast<void*>(0));
+    lv_obj_set_user_data(ui_SettingsSecondarySwatch, reinterpret_cast<void*>(1));
+    lv_obj_remove_event_cb(ui_SettingsPrimarySwatch, callback);
+    lv_obj_remove_event_cb(ui_SettingsSecondarySwatch, callback);
+    lv_obj_add_event_cb(ui_SettingsPrimarySwatch, callback, LV_EVENT_CLICKED, userData);
+    lv_obj_add_event_cb(ui_SettingsSecondarySwatch, callback, LV_EVENT_CLICKED, userData);
 }

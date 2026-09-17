@@ -628,6 +628,12 @@ void SignalsVisualizationGui::ensureActiveChartValueKeys()
     const std::string deviceId = currentDevice->getId();
     const auto availableKeys = getAvailableChartValueKeys();
     if (chartSelectedDeviceId != deviceId) {
+        manualScaleConfigured = false;
+        if (manualScaleEnabled) {
+            manualScaleEnabled = false;
+            manualScalePanel.hide();
+            refreshScaleModeControls();
+        }
         chartSelectedDeviceId = deviceId;
         chartSelectedValueKeys.clear();
     }
@@ -701,7 +707,7 @@ std::string SignalsVisualizationGui::buildChartScalingText(const std::string &ch
         return "";
     }
 
-    return "Auto scale";
+    return manualScaleEnabled ? "Manual scale" : "Auto scale";
 }
 
 void SignalsVisualizationGui::showEmptyChartState(const char *message)
@@ -764,7 +770,12 @@ void SignalsVisualizationGui::mapHistoryToPlot(const double *rawHistory, lv_coor
             continue;
         }
 
-        double normalized = (rawHistory[i] - minValue) / range;
+        double normalized = manualScaleEnabled ? manualScale.normalizedY(rawHistory[i])
+                                                : (rawHistory[i] - minValue) / range;
+        if (!std::isfinite(normalized)) {
+            plotHistory[i] = LV_CHART_POINT_NONE;
+            continue;
+        }
         if (normalized < 0.0) {
             normalized = 0.0;
         } else if (normalized > 1.0) {
@@ -1072,7 +1083,8 @@ void SignalsVisualizationGui::updateChart(bool force)
             return;
         }
 
-        auto primaryRange = computeChartRange(rawHistoryPrimary, chartVisibleSampleCount);
+        auto primaryRange = manualScaleEnabled ? std::make_pair(manualScale.yMin, manualScale.yMax)
+                                               : computeChartRange(rawHistoryPrimary, chartVisibleSampleCount);
         mapHistoryToPlot(rawHistoryPrimary, plotHistoryPrimary, chartVisibleSampleCount, primaryRange.first, primaryRange.second);
 
         bool haveSecond = false;
@@ -1082,11 +1094,16 @@ void SignalsVisualizationGui::updateChart(bool force)
         if (chartKeys.size() > 1) {
             haveSecond = buildNumericHistoryForKey(chartKeys[1], rawHistorySecondary, appendSample);
             if (haveSecond) {
-                secondaryRange = computeChartRange(rawHistorySecondary, chartVisibleSampleCount);
+                secondaryRange = manualScaleEnabled ? primaryRange
+                                                    : computeChartRange(rawHistorySecondary, chartVisibleSampleCount);
                 mapHistoryToPlot(rawHistorySecondary, plotHistorySecondary, chartVisibleSampleCount, secondaryRange.first, secondaryRange.second);
             }
         }
 
+        if (!manualScaleEnabled) {
+            autoYMin = haveSecond ? std::min(primaryRange.first, secondaryRange.first) : primaryRange.first;
+            autoYMax = haveSecond ? std::max(primaryRange.second, secondaryRange.second) : primaryRange.second;
+        }
         chartPanel.setRange(primaryRange.first, primaryRange.second, secondaryRange.first, secondaryRange.second, haveSecond);
         chartPanel.clearSeries();
         chartPanel.populatePrimarySeries(plotHistoryPrimary, chartVisibleSampleCount);
@@ -1222,6 +1239,7 @@ void SignalsVisualizationGui::handleBackButtonClick(){
 
 void SignalsVisualizationGui::handlePauseButtonClick()
 {
+    if (settingsPanel.isVisible()) return;
     paused = !paused;
     deviceManager.setRunning(!paused);
     toolbarPanel.setPaused(paused);
@@ -1345,6 +1363,14 @@ void SignalsVisualizationGui::handleClearConfirmButtonClick()
 
 void SignalsVisualizationGui::handleSettingsButtonClick(lv_obj_t *recordGroup, lv_obj_t *btnSettings,lv_obj_t *parentWidget)
 {
+    if (settingsPanel.isVisible()) {
+        hideSettingsPanel();
+        return;
+    }
+    if (!parentWidget || !recordGroup || !btnSettings) return;
+    paused = true;
+    deviceManager.setRunning(false);
+    toolbarPanel.setPaused(true);
     const auto availableChartValueKeys = getAvailableChartValueKeys();
     const auto activeChartValueKeys = getActiveChartValueKeys();
     settingsPanel.show(
@@ -1374,6 +1400,8 @@ void SignalsVisualizationGui::handleSettingsButtonClick(lv_obj_t *recordGroup, l
             auto *self = static_cast<SignalsVisualizationGui *>(lv_event_get_user_data(e));
             self->router.setVisualizationUpdatePeriodMs(lv_slider_get_value(lv_event_get_target(e)));
         });
+    refreshScaleModeControls();
+    refreshSeriesColors();
 }
 
 void SignalsVisualizationGui::handleChartValueSelectionClick(size_t valueIndex)
@@ -1419,9 +1447,16 @@ void SignalsVisualizationGui::handleStillRecording(){
         });
 }
 
-void SignalsVisualizationGui::hideSettingsPanel()
+void SignalsVisualizationGui::hideSettingsPanel(bool resume)
 {
+    const bool wasVisible = settingsPanel.isVisible();
+    manualScalePanel.hide();
     settingsPanel.hide();
+    if (wasVisible) {
+        paused = false;
+        deviceManager.setRunning(resume);
+        toolbarPanel.setPaused(false);
+    }
 }
 
 void SignalsVisualizationGui::goToPreviousDevice()
@@ -1503,6 +1538,7 @@ void SignalsVisualizationGui::hideVisualization()
     if (!initialized || !ui_DeviceWidget)
         return;
 
+    hideSettingsPanel(false);
     lv_obj_add_flag(ui_DeviceWidget, LV_OBJ_FLAG_HIDDEN);
     debugLogMessage("SignalsVisualizationGui::hideVisualization", "gui operation", "hidden");
 }
@@ -1523,4 +1559,65 @@ void SignalsVisualizationGui::showAlert(const char *message){
 
 void SignalsVisualizationGui::hideAlert(){
     feedbackPanel.hideAlert();
+}
+
+void SignalsVisualizationGui::handleScaleModeEvent(lv_event_t *event)
+{
+    auto *self = static_cast<SignalsVisualizationGui*>(lv_event_get_user_data(event));
+    self->setManualScaleEnabled(lv_dropdown_get_selected(lv_event_get_target(event)) == 1);
+}
+
+void SignalsVisualizationGui::handleManualScaleEvent(lv_event_t *event)
+{
+    static_cast<SignalsVisualizationGui*>(lv_event_get_user_data(event))->showManualScalePanel();
+}
+
+void SignalsVisualizationGui::refreshScaleModeControls()
+{
+    settingsPanel.configureScaleMode(manualScaleEnabled, this, handleScaleModeEvent, handleManualScaleEvent);
+}
+
+void SignalsVisualizationGui::setManualScaleEnabled(bool enabled)
+{
+    if (enabled == manualScaleEnabled) return;
+    if (enabled) {
+        if (!manualScaleConfigured) {
+            manualScale.yMin = autoYMin;
+            manualScale.yMax = autoYMax;
+        }
+        if (!manualScale.valid()) return;
+        manualScaleConfigured = true;
+    } else {
+        manualScalePanel.hide();
+    }
+    manualScaleEnabled = enabled;
+    refreshScaleModeControls();
+    updateChart(true);
+}
+
+void SignalsVisualizationGui::showManualScalePanel()
+{
+    if (!manualScaleEnabled) return;
+    manualScalePanel.show(manualScale, [this](const ChartManualScale& scale) {
+        manualScale = scale;
+        updateChart(true);
+    });
+}
+
+void SignalsVisualizationGui::handleSeriesColorEvent(lv_event_t *event)
+{
+    auto *self = static_cast<SignalsVisualizationGui*>(lv_event_get_user_data(event));
+    const bool primary = reinterpret_cast<intptr_t>(lv_obj_get_user_data(lv_event_get_current_target(event))) == 0;
+    auto& index = primary ? self->primaryColorIndex : self->secondaryColorIndex;
+    index = static_cast<uint8_t>((index + 1) % (sizeof(SIGNAL_CARD_COLORS) / sizeof(SIGNAL_CARD_COLORS[0])));
+    self->refreshSeriesColors();
+}
+
+void SignalsVisualizationGui::refreshSeriesColors()
+{
+    const auto primary = SIGNAL_CARD_COLORS[primaryColorIndex];
+    const auto secondary = SIGNAL_CARD_COLORS[secondaryColorIndex];
+    chartPanel.setSeriesColors(primary, secondary);
+    settingsPanel.configureSeriesColors(primary, secondary, this, handleSeriesColorEvent);
+    settingsPanel.updateChartValueBlocks(getAvailableChartValueKeys(), getActiveChartValueKeys());
 }
