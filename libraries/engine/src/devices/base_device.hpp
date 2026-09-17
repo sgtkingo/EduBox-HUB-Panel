@@ -519,6 +519,7 @@ public:
         auto response = protocolClient.control(vscp::String(UID.c_str()), valueMap);
         if (response.status == vscp::Status::Error)
         {
+            protocolClient.stopCommunication(); // Outcome uncertain: fail safe, no automatic retry.
             throw DeviceSynchronizationFailException("BaseDevice::syncControls", std::string(response.error.c_str()));
         }
 

@@ -62,5 +62,10 @@ int main() {
     selected.select(uart); client.closeSession(); client.setSequenceEnabled(false);
     assert(session.init().status == vscp::Status::Ok);
     assert(uart.writes > oldWrites && ble.controls == 1);
+    session.stopCommunication(); // An uncertain control must request a main-loop shutdown.
+    assert(session.connectionLost() && session.serviceStopRequest());
+    assert(!session.serviceStopRequest() && uart.byes == 2 && !client.isInitialized());
+    const int afterStop = uart.writes;
+    session.control("A02", {}); assert(uart.writes == afterStop);
     std::cout << "PASS Panel physical loss, explicit restore and UART/BLE isolation\n";
 }

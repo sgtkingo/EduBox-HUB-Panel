@@ -270,6 +270,7 @@ void setup ()
 void loop ()
 {
     if (protocolLink.service()) deviceManager.notifyProtocolTransportDisconnected();
+    deviceManager.serviceProtocolSafety();
     vscpClient.poll();
 #if ALLOW_PING_INTERRUPT
     if (!linkWatchdogTimerReady || linkWatchdogDue.exchange(false, std::memory_order_acquire)) {

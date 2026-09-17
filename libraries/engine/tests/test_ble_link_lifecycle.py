@@ -22,12 +22,14 @@ class BleLifecycleTest(unittest.TestCase):
         controls = (ROOT / "src/devices/base_device.hpp").read_text(encoding="utf-8")
         sync = controls.split("void syncControls(", 1)[1].split("bool hasValues()", 1)[0]
         self.assertLess(sync.index("isControlsSync = true"), sync.index("protocolClient.control("))
+        self.assertIn("protocolClient.stopCommunication();", sync)
         gui = (ROOT / "src/gui/signals_visualization_gui.cpp").read_text(encoding="utf-8")
         reconnect = gui.split("bool SignalsVisualizationGui::reconnectAfterDisconnect()", 1)[1].split("void ", 1)[0]
         self.assertIn("paused = true;", reconnect)
         main = (ROOT.parents[1] / "ui/ui.ino").read_text(encoding="utf-8")
         loop = main.split("void loop ()", 1)[1]
         self.assertLess(loop.index("protocolLink.service()"), loop.index("vscpClient.poll()"))
+        self.assertLess(loop.index("serviceProtocolSafety()"), loop.index("vscpClient.poll()"))
 
 if __name__ == "__main__":
     unittest.main()

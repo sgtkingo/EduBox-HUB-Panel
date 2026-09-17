@@ -487,6 +487,16 @@ void DeviceManager::notifyProtocolTransportDisconnected()
         if (device) device->discardPendingSynchronization();
     }
 }
+void DeviceManager::serviceProtocolSafety()
+{
+    if (!protocolClient.serviceStopRequest()) return;
+    if (linkControl && linkControl->wirelessSelected()) {
+        linkControl->stopWireless();
+        // Restore radio only to the authenticated saved peer, not INIT/Run.
+        linkControl->connectRemembered();
+    }
+    notifyProtocolTransportDisconnected();
+}
 
 void DeviceManager::endProtocolSession()
 {

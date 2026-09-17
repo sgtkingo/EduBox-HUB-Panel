@@ -17,6 +17,7 @@ class RuntimeProtocolSession {
     bool lost = false;
     bool initRequired = false;
     bool closedLocally = false;
+    bool stopRequested = false;
 
     vscp::ResponseStatus stopped(const char *message) const {
         vscp::ResponseStatus response;
@@ -78,7 +79,16 @@ public:
         lost = false;
         return true;
     }
-    void stopCommunication() { lost = true; }
+    void stopCommunication() { lost = true; stopRequested = true; }
+    // Main-loop safety barrier after an uncertain CONTROL/batch reconnect failure.
+    bool serviceStopRequest() {
+        if (!stopRequested) return false;
+        stopRequested = false;
+        client.bye(); // Best effort; application also closes physical BLE.
+        client.closeSession();
+        initRequired = true; monitoring = false;
+        return true;
+    }
     void invalidateInitialization() { initRequired = true; monitoring = false; }
     void notifyTransportDisconnected() {
         client.closeSession();

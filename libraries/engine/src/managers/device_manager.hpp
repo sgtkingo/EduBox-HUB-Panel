@@ -106,6 +106,7 @@ public:
     void setProtocolLinkControl(ProtocolLinkControl& control) { linkControl = &control; }
     ProtocolLinkControl* getProtocolLinkControl() const { return linkControl; }
     void notifyProtocolTransportDisconnected();
+    void serviceProtocolSafety();
 
     /**
      * @brief Set the running status of the manager
