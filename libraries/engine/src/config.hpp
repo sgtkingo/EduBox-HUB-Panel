@@ -30,13 +30,13 @@
 
 // Unified project debug logging switch. Exceptions use error level 1.
 #ifndef ENABLE_DEBUG
-#define ENABLE_DEBUG 0
+#define ENABLE_DEBUG 1
 #endif
 
 // Debug verbosity:
 // 0 = disabled, 1 = errors only, 2 = warnings and important operations, 3 = all debug details.
 #ifndef DEBUG_VERBOSE_LEVEL
-#define DEBUG_VERBOSE_LEVEL 0
+#define DEBUG_VERBOSE_LEVEL 3
 #endif
 
 // Application-owned UART wiring for the injected VSCP transport.

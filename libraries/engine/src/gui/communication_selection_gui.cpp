@@ -272,7 +272,11 @@ void CommunicationSelectionGui::hideCommunicationSelection(void)
 void CommunicationSelectionGui::showWireless(bool remembered)
 {
     auto* link = deviceManager.getProtocolLinkControl();
-    if (!link) { splashMessage("BLE transport unavailable in this build."); return; }
+    if (!link) {
+        debugLogMessage(DEBUG_VERBOSE_ERRORS, "BLE.GUI", "open", "protocol link unavailable");
+        splashMessage("BLE transport unavailable in this build."); return;
+    }
+    debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "BLE.GUI", "open", "wireless panel requested autoRemembered=%d", remembered);
     deviceManager.endProtocolSession();
     if (!wirelessPanel) {
         wirelessPanel = lv_obj_create(ui_Widget);
@@ -331,28 +335,50 @@ void CommunicationSelectionGui::showWireless(bool remembered)
         }, 200, this);
     }
     lv_obj_clear_flag(wirelessPanel, LV_OBJ_FLAG_HIDDEN);
-    if (remembered && link->info().rememberedAddress[0]) startWirelessConnection(true);
+    const bool hasRememberedPeer = link->info().rememberedAddress[0] != 0;
+    debugLogMessage(DEBUG_VERBOSE_ALL, "BLE.GUI", "open", "panel ready rememberedPeer=%d", hasRememberedPeer);
+    if (remembered && hasRememberedPeer) startWirelessConnection(true);
     else { displayedPeerCount = static_cast<size_t>(-1); link->scanWireless(); }
 }
 
 void CommunicationSelectionGui::startWirelessConnection(bool remembered)
 {
     auto* link = deviceManager.getProtocolLinkControl();
-    if (!link || wirelessPending) return;
+    if (!link || wirelessPending) {
+        debugLogMessage(DEBUG_VERBOSE_ALL, "BLE.GUI", "connect ignored", "link=%d pending=%d", link != nullptr, wirelessPending);
+        return;
+    }
     const auto info = link->info();
     if (info.state == ProtocolLinkState::Scanning || info.state == ProtocolLinkState::Connecting ||
-        info.state == ProtocolLinkState::Securing) return;
+        info.state == ProtocolLinkState::Securing) {
+        debugLogMessage(DEBUG_VERBOSE_ALL, "BLE.GUI", "connect ignored", "BLE busy state=%u",
+            static_cast<unsigned>(info.state));
+        return;
+    }
+    debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "BLE.GUI", "connect", "request mode=%s peers=%u selected=%u",
+        remembered ? "remembered" : "manual", static_cast<unsigned>(info.count),
+        wirelessPeers ? static_cast<unsigned>(lv_dropdown_get_selected(wirelessPeers)) : 0U);
     if (remembered) {
-        if (!link->connectRemembered()) { splashMessage("No bonded Board remembered. Scan and pair first."); return; }
+        if (!link->connectRemembered()) {
+            debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "BLE.GUI", "connect rejected", "remembered peer unavailable");
+            splashMessage("No bonded Board remembered. Scan and pair first."); return;
+        }
     } else {
         const char* pin = lv_textarea_get_text(wirelessPin);
-        if (std::strlen(pin) != 6) { splashMessage("Enter the six-digit PIN from the Board console."); return; }
+        if (std::strlen(pin) != 6) {
+            debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "BLE.GUI", "connect rejected", "commissioning PIN length invalid");
+            splashMessage("Enter the six-digit PIN from the Board console."); return;
+        }
         uint32_t value = 0;
         for (size_t i = 0; i < 6; ++i) value = value * 10 + uint32_t(pin[i] - '0');
-        if (!link->connectWireless(lv_dropdown_get_selected(wirelessPeers), value)) return;
+        if (!link->connectWireless(lv_dropdown_get_selected(wirelessPeers), value)) {
+            debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "BLE.GUI", "connect rejected", "central rejected selected peer or PIN format");
+            return;
+        }
     }
     lv_textarea_set_text(wirelessPin, ""); // PIN is never saved.
     wirelessPending = true;
+    debugLogMessage(DEBUG_VERBOSE_ALL, "BLE.GUI", "connect", "request queued; PIN field cleared");
 }
 
 void CommunicationSelectionGui::refreshWireless()
@@ -374,22 +400,30 @@ void CommunicationSelectionGui::refreshWireless()
         displayedPeerCount = info.count;
     }
     if (!wirelessPending) return;
-    if (info.state == ProtocolLinkState::Error) { wirelessPending = false; return; }
+    if (info.state == ProtocolLinkState::Error) {
+        debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "BLE.GUI", "connect failed", "error=%s", info.error);
+        wirelessPending = false; return;
+    }
     if (info.state != ProtocolLinkState::Ready) return;
     wirelessPending = false;
     // Still in the main GUI owner context, never in a BLE callback.
     lv_label_set_text(wirelessStatus, "BLE ready. Initializing VSCP...");
     lv_refr_now(nullptr);
+    debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "BLE.GUI", "VSCP initialization", "BLE ready; starting VSCP INIT mtu=%u",
+        static_cast<unsigned>(info.mtu));
     if (!deviceManager.initializeProtocolConnection()) {
+        debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "BLE.GUI", "VSCP initialization", "VSCP INIT failed");
         lv_label_set_text(wirelessStatus, "VSCP INIT failed: Board busy / firmware mismatch. Retry Connect.");
         return;
     }
+    debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "BLE.GUI", "VSCP initialization", "VSCP INIT completed");
     router.completeCommunicationSelection(DefaultCommunicationMode::WIRELESS_MANUAL);
     // Navigation deletes this panel/timer: do not touch any GUI object hereafter.
 }
 
 void CommunicationSelectionGui::closeWireless()
 {
+    debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "BLE.GUI", "close", "wireless workflow cancelled by user");
     wirelessPending = false;
     deviceManager.getProtocolLinkControl()->stopWireless();
     lv_obj_add_flag(wirelessPanel, LV_OBJ_FLAG_HIDDEN);

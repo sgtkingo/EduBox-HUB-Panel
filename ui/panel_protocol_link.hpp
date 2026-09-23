@@ -2,6 +2,7 @@
 #include <protocol_link_control.hpp>
 #include <selected_protocol_transport.hpp>
 #include <edubox_ble.hpp>
+#include <expt.hpp>
 #include <cstdio>
 
 // Physical composition only. VSCP/DeviceManager and GUI depend on the interface.
@@ -14,19 +15,27 @@ class PanelProtocolLink : public ProtocolLinkControl {
     edubox::ble::Central& central_;
     bool wireless_ = false;
     void selectWireless() {
+        const bool changed = !wireless_;
         client_.closeSession();
         wireless_ = true;
         selected_.select(transport_);
         client_.setSequenceEnabled(true); client_.setTimeout(10000);
+        debugLogMessage(changed ? DEBUG_VERBOSE_IMPORTANT : DEBUG_VERBOSE_ALL,
+            "BLE.PanelLink", "transport selection",
+            "wireless selected changed=%d sequence=1 timeoutMs=10000", changed);
     }
 public:
     PanelProtocolLink(vscp::Client& client, vscp::StreamTransport& uart, SelectedProtocolTransport& selected,
                       edubox::ble::Channel& channel, edubox::ble::Transport& transport, edubox::ble::Central& central)
         : client_(client), uart_(uart), selected_(selected), channel_(channel), transport_(transport), central_(central) {}
     void selectCable() override {
+        const bool changed = wireless_;
         client_.closeSession(); wireless_ = false;
         central_.stop(); uart_.clearInput(); selected_.select(uart_);
         client_.setSequenceEnabled(false); client_.setTimeout(vscp::DEFAULT_TIMEOUT_MS);
+        debugLogMessage(changed ? DEBUG_VERBOSE_IMPORTANT : DEBUG_VERBOSE_ALL,
+            "BLE.PanelLink", "transport selection", "cable selected changed=%d sequence=0 timeoutMs=%lu",
+            changed, static_cast<unsigned long>(vscp::DEFAULT_TIMEOUT_MS));
     }
     void scanWireless() override { selectWireless(); central_.scan(); }
     bool connectWireless(size_t index, uint32_t pin) override { selectWireless(); return central_.select(index, pin); }
@@ -37,7 +46,13 @@ public:
     bool service() {
         // Latch physical loss once, before Client::poll / any GUI exchange.
         if (!channel_.takeLoss()) return false;
-        if (!wireless_) return false;
+        if (!wireless_) {
+            debugLogMessage(DEBUG_VERBOSE_ALL, "BLE.PanelLink", "physical loss",
+                "BLE channel loss ignored because cable transport is selected");
+            return false;
+        }
+        debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "BLE.PanelLink", "physical loss",
+            "BLE channel loss consumed; closing VSCP session");
         client_.closeSession(); return true;
     }
     ProtocolLinkInfo info() const override {

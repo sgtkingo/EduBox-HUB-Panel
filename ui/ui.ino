@@ -11,7 +11,9 @@
 #include <vscp.hpp>
 #include <engine.hpp>  // include engine header
 #include "vscp_panel_log_sink.hpp"
+#include "panel_ble_log_sink.hpp"
 #include "panel_protocol_link.hpp"
+#include <esp_heap_caps.h>
 #include <esp_timer.h>
 #include <atomic>
 
@@ -97,7 +99,18 @@ static const uint16_t screenWidth  = 800;
 static const uint16_t screenHeight = 480;
 
 static lv_disp_draw_buf_t draw_buf;
-static lv_color_t buf [screenWidth * screenHeight / LVGL_BUFFER_RATIO];
+static constexpr size_t lvglBufferPixels = screenWidth * screenHeight / LVGL_BUFFER_RATIO;
+static lv_color_t *buf = nullptr;
+
+static bool allocateLvglDrawBuffer()
+{
+    const uint32_t externalCaps = MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT;
+    const uint32_t caps = heap_caps_get_total_size(externalCaps)
+        ? externalCaps
+        : MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT;
+    buf = static_cast<lv_color_t *>(heap_caps_malloc(sizeof(lv_color_t) * lvglBufferPixels, caps));
+    return buf != nullptr;
+}
 
 
 #include "touch.h"
@@ -158,7 +171,8 @@ PanelVscpLogSink vscpLogSink;
 vscp::StreamTransport vscpTransport(vscpSerial, vscp::MAX_MESSAGE_SIZE, &vscpLogSink); // Transport only frames lines; it does not own the UART
 edubox::ble::Channel bleChannel;
 edubox::ble::Transport bleTransport(bleChannel);
-edubox::ble::Central bleBridge(bleChannel);
+PanelBleLogSink bleLogSink;
+edubox::ble::Central bleBridge(bleChannel, &bleLogSink);
 SelectedProtocolTransport selectedTransport(vscpTransport);
 vscp::Client vscpClient(selectedTransport); // One protocol owner, selected physical link
 PanelProtocolLink protocolLink(vscpClient, vscpTransport, selectedTransport, bleChannel, bleTransport, bleBridge);
@@ -216,7 +230,11 @@ void setup ()
 
     //screenWidth = lcd.width();
     //screenHeight = lcd.height();
-    lv_disp_draw_buf_init( &draw_buf, buf, NULL, screenWidth * screenHeight / LVGL_BUFFER_RATIO );
+    if (!allocateLvglDrawBuffer()) {
+        debugLogMessage(DEBUG_VERBOSE_ERRORS, "setup", "display", "LVGL draw buffer allocation failed");
+        return;
+    }
+    lv_disp_draw_buf_init( &draw_buf, buf, NULL, lvglBufferPixels );
 
     /*Initialize the display*/
     static lv_disp_drv_t disp_drv;

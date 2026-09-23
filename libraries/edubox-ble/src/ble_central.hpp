@@ -1,6 +1,7 @@
 #pragma once
 #ifdef ARDUINO_ARCH_ESP32
 #include "ble_channel.hpp"
+#include "ble_log_sink.hpp"
 #include <NimBLEDevice.h>
 #include <Preferences.h>
 #include <array>
@@ -21,6 +22,7 @@ struct Snapshot {
 class Central : private NimBLEClientCallbacks {
   enum class Command { None, Scan, Connect, Saved, Stop, Forget };
   Channel& channel_;
+  LogSink* logSink_ = nullptr;
   mutable std::mutex stateMutex_;
   Snapshot snapshot_;
   Command command_ = Command::None;
@@ -46,10 +48,11 @@ class Central : private NimBLEClientCallbacks {
   void run();
   bool connect(const Peer&, uint32_t pin, uint32_t epoch);
   void setState(LinkState, const char* error = "", uint32_t epoch = 0);
+  void log(LogLevel, const char* reason, const char* format, ...) const;
   void stopLink();
   static void task(void* self) { static_cast<Central*>(self)->run(); }
 public:
-  explicit Central(Channel& channel) : channel_(channel) {}
+  explicit Central(Channel& channel, LogSink* logSink = nullptr) : channel_(channel), logSink_(logSink) {}
   bool begin();
   void scan();
   bool select(size_t index, uint32_t pin);

@@ -32,6 +32,12 @@ owns blocking GAP/GATT calls in a worker on core 0; only main loop owns VSCP/LVG
 Radio reconnect uses a saved authenticated identity and 1/2/4/8 s backoff; it does
 not restore INIT/devices or resend CONFIG/CONTROL.
 
+Central accepts an optional application `LogSink`. Level 2 (`Important`) reports
+worker/state, scan summary, pairing/authentication outcome, connect/disconnect and
+retry events. Level 3 (`Detail`) adds individual advertisements, addresses, GAP,
+GATT, MTU, channel-generation, bond-storage and cleanup steps. Commissioning PIN
+values and protocol payloads are never written by the BLE logger.
+
 Security build flags on BOTH C and C++:
 CONFIG_BT_NIMBLE_MAX_CONNECTIONS=1, MYNEWT_VAL_BLE_SM_SC_ONLY=1,
 MYNEWT_VAL_BLE_SM_LEGACY=0. Runtime demands encryption, MITM authentication,
