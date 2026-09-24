@@ -19,6 +19,7 @@ private:
     lv_obj_t *ui_LoadingLabel = nullptr;
     lv_obj_t *wirelessPanel = nullptr, *wirelessStatus = nullptr;
     lv_obj_t *wirelessPeers = nullptr, *wirelessPin = nullptr;
+    lv_obj_t *wirelessKeyboardOverlay = nullptr, *wirelessKeyboard = nullptr;
     lv_timer_t *wirelessTimer = nullptr;
     bool wirelessPending = false;
     size_t displayedPeerCount = static_cast<size_t>(-1);
@@ -26,6 +27,9 @@ private:
     void refreshWireless();
     void startWirelessConnection(bool remembered);
     void closeWireless();
+    void showWirelessKeyboard();
+    void hideWirelessKeyboard();
+    void destroyWirelessKeyboard();
 
     void createOptionButton(const char *text, lv_coord_t x, lv_coord_t y, DefaultCommunicationMode mode, bool supported = true);
     void createWirelessManualButton(lv_coord_t x, lv_coord_t y);

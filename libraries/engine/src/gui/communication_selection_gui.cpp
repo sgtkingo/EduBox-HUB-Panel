@@ -256,6 +256,7 @@ void CommunicationSelectionGui::hideCommunicationSelection(void)
     }
 
     if (wirelessTimer) { lv_timer_del(wirelessTimer); wirelessTimer = nullptr; }
+    destroyWirelessKeyboard();
     wirelessPanel = wirelessStatus = wirelessPeers = wirelessPin = nullptr;
     wirelessPending = false;
     if (ui_Widget) {
@@ -297,10 +298,15 @@ void CommunicationSelectionGui::showWireless(bool remembered)
         lv_textarea_set_accepted_chars(wirelessPin, "0123456789");
         lv_textarea_set_placeholder_text(wirelessPin, "6-digit Board PIN");
         lv_textarea_set_password_mode(wirelessPin, true);
-        lv_obj_t* keyboard = lv_keyboard_create(wirelessPanel);
-        lv_obj_set_size(keyboard, 485, 145); lv_obj_set_pos(keyboard, 196, 132);
-        lv_keyboard_set_mode(keyboard, LV_KEYBOARD_MODE_NUMBER);
-        lv_keyboard_set_textarea(keyboard, wirelessPin);
+        lv_obj_add_event_cb(wirelessPin, [](lv_event_t* e) {
+            const auto code = lv_event_get_code(e);
+            auto* self = static_cast<CommunicationSelectionGui*>(lv_event_get_user_data(e));
+            if (code == LV_EVENT_FOCUSED || code == LV_EVENT_CLICKED) self->showWirelessKeyboard();
+            else if (code == LV_EVENT_READY || code == LV_EVENT_CANCEL) self->hideWirelessKeyboard();
+        }, LV_EVENT_ALL, this);
+        lv_obj_t* pinHint = lv_label_create(wirelessPanel);
+        lv_label_set_text(pinHint, "Tap the PIN field to open the keypad");
+        lv_obj_set_pos(pinHint, 196, 146);
         auto addButton = [this](const char* text, int x, int y, lv_event_cb_t callback) {
             auto* button = lv_btn_create(wirelessPanel);
             lv_obj_set_size(button, 145, 40); lv_obj_set_pos(button, x, y);
@@ -312,6 +318,7 @@ void CommunicationSelectionGui::showWireless(bool remembered)
         });
         addButton("Scan", 182, 294, [](lv_event_t* e) {
             auto* self = static_cast<CommunicationSelectionGui*>(lv_event_get_user_data(e));
+            self->hideWirelessKeyboard();
             self->wirelessPending = false; self->displayedPeerCount = static_cast<size_t>(-1);
             self->deviceManager.getProtocolLinkControl()->scanWireless();
         });
@@ -320,6 +327,7 @@ void CommunicationSelectionGui::showWireless(bool remembered)
         });
         addButton("Forget peer", 522, 294, [](lv_event_t* e) {
             auto* self = static_cast<CommunicationSelectionGui*>(lv_event_get_user_data(e));
+            self->hideWirelessKeyboard();
             self->wirelessPending = false;
             self->deviceManager.getProtocolLinkControl()->forgetWireless();
             lv_textarea_set_text(self->wirelessPin, "");
@@ -335,6 +343,7 @@ void CommunicationSelectionGui::showWireless(bool remembered)
         }, 200, this);
     }
     lv_obj_clear_flag(wirelessPanel, LV_OBJ_FLAG_HIDDEN);
+    hideWirelessKeyboard();
     const bool hasRememberedPeer = link->info().rememberedAddress[0] != 0;
     debugLogMessage(DEBUG_VERBOSE_ALL, "BLE.GUI", "open", "panel ready rememberedPeer=%d", hasRememberedPeer);
     if (remembered && hasRememberedPeer) startWirelessConnection(true);
@@ -377,6 +386,7 @@ void CommunicationSelectionGui::startWirelessConnection(bool remembered)
         }
     }
     lv_textarea_set_text(wirelessPin, ""); // PIN is never saved.
+    hideWirelessKeyboard();
     wirelessPending = true;
     debugLogMessage(DEBUG_VERBOSE_ALL, "BLE.GUI", "connect", "request queued; PIN field cleared");
 }
@@ -424,7 +434,62 @@ void CommunicationSelectionGui::refreshWireless()
 void CommunicationSelectionGui::closeWireless()
 {
     debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "BLE.GUI", "close", "wireless workflow cancelled by user");
+    hideWirelessKeyboard();
     wirelessPending = false;
     deviceManager.getProtocolLinkControl()->stopWireless();
     lv_obj_add_flag(wirelessPanel, LV_OBJ_FLAG_HIDDEN);
+}
+
+void CommunicationSelectionGui::showWirelessKeyboard()
+{
+    if (!wirelessPin) return;
+
+    if (!wirelessKeyboardOverlay) {
+        wirelessKeyboardOverlay = lv_obj_create(lv_layer_top());
+        lv_obj_remove_style_all(wirelessKeyboardOverlay);
+        lv_obj_set_size(wirelessKeyboardOverlay, lv_pct(100), lv_pct(100));
+        lv_obj_align(wirelessKeyboardOverlay, LV_ALIGN_CENTER, 0, 0);
+        lv_obj_set_style_bg_color(wirelessKeyboardOverlay, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_bg_opa(wirelessKeyboardOverlay, 110, LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_add_flag(wirelessKeyboardOverlay, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_clear_flag(wirelessKeyboardOverlay, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_add_event_cb(wirelessKeyboardOverlay, [](lv_event_t* e) {
+            if (lv_event_get_target(e) != lv_event_get_current_target(e)) return;
+            static_cast<CommunicationSelectionGui*>(lv_event_get_user_data(e))->hideWirelessKeyboard();
+        }, LV_EVENT_CLICKED, this);
+
+        wirelessKeyboard = lv_keyboard_create(wirelessKeyboardOverlay);
+        lv_obj_set_size(wirelessKeyboard, 520, 180);
+        lv_obj_align(wirelessKeyboard, LV_ALIGN_BOTTOM_MID, 0, -8);
+        lv_keyboard_set_mode(wirelessKeyboard, LV_KEYBOARD_MODE_NUMBER);
+        lv_obj_add_event_cb(wirelessKeyboard, [](lv_event_t* e) {
+            const auto code = lv_event_get_code(e);
+            if (code == LV_EVENT_READY || code == LV_EVENT_CANCEL) {
+                static_cast<CommunicationSelectionGui*>(lv_event_get_user_data(e))->hideWirelessKeyboard();
+            }
+        }, LV_EVENT_ALL, this);
+        debugLogMessage(DEBUG_VERBOSE_ALL, "BLE.GUI", "PIN keypad", "floating numeric keypad created");
+    }
+
+    lv_keyboard_set_textarea(wirelessKeyboard, wirelessPin);
+    lv_obj_clear_flag(wirelessKeyboardOverlay, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_move_foreground(wirelessKeyboardOverlay);
+    debugLogMessage(DEBUG_VERBOSE_ALL, "BLE.GUI", "PIN keypad", "shown");
+}
+
+void CommunicationSelectionGui::hideWirelessKeyboard()
+{
+    if (!wirelessKeyboardOverlay) return;
+    if (wirelessKeyboard) lv_keyboard_set_textarea(wirelessKeyboard, nullptr);
+    lv_obj_add_flag(wirelessKeyboardOverlay, LV_OBJ_FLAG_HIDDEN);
+    debugLogMessage(DEBUG_VERBOSE_ALL, "BLE.GUI", "PIN keypad", "hidden");
+}
+
+void CommunicationSelectionGui::destroyWirelessKeyboard()
+{
+    if (!wirelessKeyboardOverlay) return;
+    if (wirelessKeyboard) lv_keyboard_set_textarea(wirelessKeyboard, nullptr);
+    lv_obj_del(wirelessKeyboardOverlay);
+    wirelessKeyboardOverlay = nullptr;
+    wirelessKeyboard = nullptr;
 }

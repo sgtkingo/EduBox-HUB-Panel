@@ -43,7 +43,7 @@
 // 1 = automatic link PING after INIT (also in Pause and on other screens).
 // 0 = disable automatic PING and its timer; runtime request safeguards remain.
 #ifndef ALLOW_PING_INTERRUPT
-#define ALLOW_PING_INTERRUPT 1
+#define ALLOW_PING_INTERRUPT 0
 #endif
 
 #ifndef EDUBOX_HUB_PANEL_VSCP_UART_PORT
