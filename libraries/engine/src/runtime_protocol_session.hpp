@@ -39,7 +39,7 @@ public:
     explicit RuntimeProtocolSession(vscp::Client& protocolClient, Clock timeSource = defaultClock)
         : client(protocolClient), clock(timeSource) {}
     bool connectionLost() const { return !closedLocally && (lost || client.sessionClosed()); }
-    bool bye() {
+    bool bye(bool waitForResponse = false) {
         stopRequested = false; // Home/cancel must not arm a later radio reconnect.
         if (closedLocally) return true;
         const bool notifyPeer = monitoring || isInitialized() || connectionLost();
@@ -50,7 +50,7 @@ public:
         lost = false;
         failures = 0;
         pingFailures = 0;
-        return !notifyPeer || client.bye();
+        return !notifyPeer || client.bye(waitForResponse);
     }
     uint8_t consecutiveFailures() const { return failures; }
     uint8_t consecutivePingFailures() const { return pingFailures; }

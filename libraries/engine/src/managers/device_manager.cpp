@@ -501,14 +501,18 @@ void DeviceManager::serviceProtocolSafety()
 void DeviceManager::endProtocolSession()
 {
     setRunning(false);
-    const bool sent = protocolClient.bye();
-    if (linkControl) linkControl->stopWireless(); // Physical loss also reaches Board if BYE enqueue fails.
+    const bool confirmed = protocolClient.bye(true);
+    if (confirmed) {
+        debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "DeviceManager::endProtocolSession",
+                        "protocol bye confirmed", "status=1 received; stopping physical link");
+    }
+    if (linkControl) linkControl->stopWireless(); // BYE response completed (or timed out) first.
     for (auto *device : catalog.getDevices()) {
         if (device) device->setPinConnectionActive(false);
     }
-    if (!sent) {
+    if (!confirmed) {
         debugLogMessage(DEBUG_VERBOSE_ERRORS, "DeviceManager::endProtocolSession",
-                        "protocol bye failed", "watchdog stopped locally");
+                        "protocol bye response missing", "session stopped locally before physical link stop");
     }
 }
 

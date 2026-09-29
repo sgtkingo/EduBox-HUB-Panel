@@ -85,7 +85,8 @@ void Peripheral::onSubscribe(NimBLECharacteristic*, NimBLEConnInfo& info, uint16
   std::lock_guard<std::mutex> lock(stateMutex_);
   if (info.getConnHandle() != handle_) return;
   subscribed_ = value == 2;
-  if (!subscribed_ && channel_.online()) channel_.fault();
+  // CCCD disable is a normal part of client teardown; poll() closes the BLE link.
+  if (!subscribed_ && channel_.online()) channel_.disconnect();
 }
 void Peripheral::onWrite(NimBLECharacteristic* characteristic, NimBLEConnInfo& info) {
   std::lock_guard<std::mutex> lock(stateMutex_);

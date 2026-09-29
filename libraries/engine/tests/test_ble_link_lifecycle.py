@@ -31,6 +31,13 @@ class BleLifecycleTest(unittest.TestCase):
         self.assertLess(loop.index("protocolLink.service()"), loop.index("vscpClient.poll()"))
         self.assertLess(loop.index("serviceProtocolSafety()"), loop.index("vscpClient.poll()"))
         self.assertIn("deviceManager.shouldPollProtocol()", loop)
+        manager = (ROOT / "src/managers/device_manager.cpp").read_text(encoding="utf-8")
+        end_session = manager.split("void DeviceManager::endProtocolSession()", 1)[1].split(
+            "bool DeviceManager::reconnectProtocolLink()", 1)[0]
+        self.assertLess(end_session.index("protocolClient.bye(true)"), end_session.index("stopWireless()"))
+        central = (ROOT.parent / "edubox-ble/src/ble_central.cpp").read_text(encoding="utf-8")
+        self.assertIn("if (enabled_ && (disconnected ||", central)
+
 
     def test_wireless_pin_keyboard_is_lazy_and_floating(self):
         gui = (ROOT / "src/gui/communication_selection_gui.cpp").read_text(encoding="utf-8")
