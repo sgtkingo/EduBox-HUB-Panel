@@ -1,1 +1,0 @@
-- Skáče obraz při kliknutí/update, není to tím že lvgl ukládá do PSRAM? Děje se to v BT i UART režimu 
