@@ -100,9 +100,14 @@ void DeviceManager::disconnectAssignedDevices(const std::vector<BaseDevice *> &d
 bool DeviceManager::connectAssignedDevices(const std::vector<BaseDevice *> &devices)
 {
     bool result = true;
+    std::string firstError;
     for (BaseDevice *device : devices) {
-        result &= connectAssignedDevice(device);
+        if (!connectAssignedDevice(device)) {
+            result = false;
+            if (firstError.empty()) firstError = lastError;
+        }
     }
+    if (!result) lastError = firstError.empty() ? "One or more devices rejected CONNECT." : firstError;
     return result;
 }
 
@@ -148,6 +153,7 @@ bool DeviceManager::detachDeviceFromPin(size_t pinIndex)
 }
 
 bool DeviceManager::init() {
+    lastError.clear();
     if(initialized)
     {
         debugLogMessage("DeviceManager::init", "init reset", "manager already initialized; erasing pin map");
@@ -170,6 +176,7 @@ bool DeviceManager::init() {
 bool DeviceManager::ensureProtocolInitialized()
 {
     if (protocolClient.isInitialized()) {
+        lastError.clear();
         return true;
     }
 
@@ -178,8 +185,14 @@ bool DeviceManager::ensureProtocolInitialized()
 
 bool DeviceManager::initializeProtocolConnection()
 {
-    if (linkControl && linkControl->wirelessSelected() &&
-        linkControl->info().state != ProtocolLinkState::Ready) return false;
+    lastError.clear();
+    if (linkControl && linkControl->wirelessSelected()) {
+        const auto linkInfo = linkControl->info();
+        if (linkInfo.state != ProtocolLinkState::Ready) {
+            lastError = linkInfo.error[0] ? linkInfo.error : "BLE link is not ready for protocol initialization.";
+            return false;
+        }
+    }
     debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "DeviceManager::initializeProtocolConnection", "protocol init", "initializing protocol on demand app=%s db=%s", catalog.getApplication().c_str(), catalog.getVersion().c_str());
 
     vscp::ResponseStatus response;
@@ -191,6 +204,7 @@ bool DeviceManager::initializeProtocolConnection()
         response = protocolClient.init(vscp::String(catalog.getApplication().c_str()), vscp::String(catalog.getVersion().c_str()));
         if (response.status == vscp::Status::Ok)
         {
+            lastError.clear();
             debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "DeviceManager::initializeProtocolConnection", "protocol init", "initialized successfully");
             return true;
         }
@@ -200,6 +214,14 @@ bool DeviceManager::initializeProtocolConnection()
     }
 
     debugLogMessage(DEBUG_VERBOSE_ERRORS, "DeviceManager::initializeProtocolConnection", "protocol init failed", "failed permanently error=%s", response.error.c_str());
+    if (response.error == "Response timeout") {
+        lastError = linkControl && linkControl->wirelessSelected()
+            ? "INIT timed out: the connected Board did not answer over BLE."
+            : "INIT timed out: the Board did not answer over UART. Check Board power and the UART TX/RX/GND connection.";
+    } else {
+        lastError = "INIT failed: ";
+        lastError += response.error.length() ? response.error.c_str() : "Board returned no error detail.";
+    }
     return false;
 }
 
@@ -245,6 +267,7 @@ bool DeviceManager::resync(BaseDevice *device)
 
 bool DeviceManager::connect() 
 {
+    lastError.clear();
     debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "DeviceManager::connect", "pin connection", "connect requested");
     if (!ensureProtocolInitialized()) {
         debugLogMessage(DEBUG_VERBOSE_ERRORS, "DeviceManager::connect", "protocol init failed", "cannot connect assigned devices");
@@ -255,6 +278,14 @@ bool DeviceManager::connect()
     const std::vector<BaseDevice *> completeDevices = filterCompleteDevices(assignedDevices);
     debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "DeviceManager::connect", "pin connection", "assigned device count=%u complete=%u", static_cast<unsigned int>(assignedDevices.size()), static_cast<unsigned int>(completeDevices.size()));
     if (completeDevices.empty()) {
+        if (assignedDevices.empty()) {
+            lastError = "No device has any assigned pins.";
+        } else {
+            BaseDevice *device = assignedDevices.front();
+            lastError = device->getTypeName() + ": missing " +
+                std::to_string(device->getMissingPinCount()) + " of " +
+                std::to_string(device->getRequiredPinCount()) + " required pins.";
+        }
         debugLogMessage(DEBUG_VERBOSE_ERRORS, "DeviceManager::connect", "pin connection failed", "no fully assigned devices");
         return false;
     }
@@ -264,7 +295,9 @@ bool DeviceManager::connect()
 
 bool DeviceManager::connectAssignedDevice(BaseDevice *device)
 {
+    lastError.clear();
     if (!device) {
+        lastError = "Cannot connect: no device is selected.";
         debugLogMessage(DEBUG_VERBOSE_ERRORS, "DeviceManager::connectAssignedDevice", "device invalid", "device is null");
         return false;
     }
@@ -283,11 +316,15 @@ bool DeviceManager::connectAssignedDevice(BaseDevice *device)
     }
 
     if (!hasPinMapAssignment) {
+        lastError = device->getTypeName() + ": no pins are assigned.";
         debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "DeviceManager::connectAssignedDevice", "pin connection failed", "device=%s has no assigned pins", device->UID.c_str());
         return false;
     }
 
     if (!device->isPinAssignmentComplete()) {
+        lastError = device->getTypeName() + ": missing " +
+            std::to_string(device->getMissingPinCount()) + " of " +
+            std::to_string(device->getRequiredPinCount()) + " required pins.";
         debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "DeviceManager::connectAssignedDevice", "pin connection failed", "device=%s missing=%u required=%u", device->UID.c_str(), static_cast<unsigned int>(device->getMissingPinCount()), static_cast<unsigned int>(device->getRequiredPinCount()));
         return false;
     }
@@ -295,6 +332,14 @@ bool DeviceManager::connectAssignedDevice(BaseDevice *device)
     debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "DeviceManager::connectAssignedDevice", "protocol connect", "device=%s pins=%s", device->UID.c_str(), device->getPins().c_str());
     const bool connected = connectDevice(device, protocolClient);
     device->setPinConnectionActive(connected);
+    if (!connected) {
+        const std::string connectionError = "CONNECT " + device->UID + " failed: " +
+            (device->getError().empty() ? "Board returned no error detail." : device->getError());
+        const bool pinsRemoved = unassignAllPinsForDevice(device);
+        lastError = connectionError; // Pin rollback clears operation errors; preserve CONNECT detail for GUI.
+        debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "DeviceManager::connectAssignedDevice", "pin assignment rollback",
+            "device=%s pinsRemoved=%d", device->UID.c_str(), pinsRemoved);
+    }
     debugLogMessage(connected ? DEBUG_VERBOSE_IMPORTANT : DEBUG_VERBOSE_ERRORS, "DeviceManager::connectAssignedDevice", connected ? "protocol connect" : "protocol connect failed", "device=%s connected=%d", device->UID.c_str(), connected);
     return connected;
 }
@@ -314,31 +359,40 @@ void DeviceManager::resetPinMap() {
 }
 
 bool DeviceManager::assignDeviceToPin(BaseDevice* device, int activePin) {
+    lastError.clear();
     VirtualPin *pin = getPinState(static_cast<size_t>(activePin));
     if (!pin) {
+        lastError = "Cannot assign pin: pin index " + std::to_string(activePin) + " is invalid.";
         debugLogMessage(DEBUG_VERBOSE_ERRORS, "DeviceManager::assignDeviceToPin", "pin index invalid", "pin=%d", activePin);
         return false;
     }
     if (!device) {
+        lastError = "Cannot assign pin: no device is selected.";
         debugLogMessage(DEBUG_VERBOSE_ERRORS, "DeviceManager::assignDeviceToPin", "device invalid", "pin=%d", activePin);
         return false;
     }
     if (!device->isPinAllowed(pin->pinNumber)) {
+        lastError = "GPIO " + std::to_string(pin->pinNumber) + " is not allowed for " + device->getTypeName() + ".";
         debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "DeviceManager::assignDeviceToPin", "pin not allowed", "device=%s pin=%d", device->UID.c_str(), pin->pinNumber);
         return false;
     }
     if (!device->canAssignMorePins()) {
+        lastError = device->getTypeName() + " already has all " +
+            std::to_string(device->getRequiredPinCount()) + " required pins assigned.";
         debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "DeviceManager::assignDeviceToPin", "pin assignment limit", "device=%s pin=%d assigned=%u required=%u", device->UID.c_str(), activePin, static_cast<unsigned int>(device->getAssignedPinCount()), static_cast<unsigned int>(device->getRequiredPinCount()));
         return false;
     }
 
     const bool assigned = pin->assignDevice(device);
+    if (!assigned) lastError = "GPIO " + std::to_string(pin->pinNumber) + " is not available.";
     debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "DeviceManager::assignDeviceToPin", "pin assignment", "device=%s pin=%d result=%d", device ? device->UID.c_str() : "-", activePin, assigned);
     return assigned;
 }
 
 bool DeviceManager::unassignDeviceFromPin(int activePin) {
+    lastError.clear();
     const bool result = detachDeviceFromPin(static_cast<size_t>(activePin));
+    if (!result) lastError = "Cannot unassign pin: pin index " + std::to_string(activePin) + " is invalid.";
     debugLogMessage("DeviceManager::unassignDeviceFromPin", "pin assignment", "pin=%d result=%d", activePin, result);
     return result;
 }
@@ -362,7 +416,9 @@ bool DeviceManager::unassignAllPinsForDevice(BaseDevice *device)
 
 bool DeviceManager::disconnectAndUnassignDevice(BaseDevice *device)
 {
+    lastError.clear();
     if (!device) {
+        lastError = "Cannot disconnect: no device is selected.";
         debugLogMessage(DEBUG_VERBOSE_ERRORS, "DeviceManager::disconnectAndUnassignDevice", "device invalid", "device is null");
         return false;
     }
@@ -376,6 +432,7 @@ bool DeviceManager::disconnectAndUnassignDevice(BaseDevice *device)
     }
 
     if (!hasPinMapAssignment) {
+        lastError = device->getTypeName() + ": no assigned pins remain to disconnect.";
         debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "DeviceManager::disconnectAndUnassignDevice", "pin assignment", "device=%s has no assigned pins", device->UID.c_str());
         return false;
     }
@@ -387,6 +444,8 @@ bool DeviceManager::disconnectAndUnassignDevice(BaseDevice *device)
 
     debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "DeviceManager::disconnectAndUnassignDevice", "protocol disconnect", "device=%s pins=%s", device->UID.c_str(), device->getPins().c_str());
     if (!disconnectDevice(device, protocolClient)) {
+        lastError = "DISCONNECT " + device->UID + " failed: " +
+            (device->getError().empty() ? "Board returned no error detail." : device->getError());
         debugLogMessage(DEBUG_VERBOSE_ERRORS, "DeviceManager::disconnectAndUnassignDevice", "protocol disconnect failed", "device=%s error=%s", device->UID.c_str(), device->getError().c_str());
         return false;
     }
@@ -467,11 +526,19 @@ std::vector<BaseDevice *> DeviceManager::getIncompleteAssignedDevices() const
 
 bool DeviceManager::reconnectDevice(BaseDevice *device)
 {
-    if (!device) return false;
+    lastError.clear();
+    if (!device) {
+        lastError = "Cannot reconnect: no device is selected.";
+        return false;
+    }
     protocolClient.invalidateInitialization();
     if (!ensureProtocolInitialized()) return false;
     const bool connected = connectDevice(device, protocolClient);
     device->setPinConnectionActive(connected);
+    if (!connected) {
+        lastError = "CONNECT " + device->UID + " failed after link recovery: " +
+            (device->getError().empty() ? "Board returned no error detail." : device->getError());
+    }
     return connected;
 }
 
@@ -481,6 +548,7 @@ void DeviceManager::serviceProtocolLink(bool allowPing)
 }
 void DeviceManager::notifyProtocolTransportDisconnected()
 {
+    lastError = "Physical transport disconnected.";
     protocolClient.notifyTransportDisconnected();
     setRunning(false);
     for (auto* device : catalog.getDevices()) {
@@ -518,11 +586,14 @@ void DeviceManager::endProtocolSession()
 
 bool DeviceManager::reconnectProtocolLink()
 {
+    lastError.clear();
     const auto connectedDevices = getConnectedAssignedDevices();
     protocolClient.invalidateInitialization();
     if (!ensureProtocolInitialized()) return false;
     for (auto *device : connectedDevices) {
         if (!connectDevice(device, protocolClient)) {
+            lastError = "CONNECT " + device->UID + " failed after link recovery: " +
+                (device->getError().empty() ? "Board returned no error detail." : device->getError());
             protocolClient.stopCommunication();
             return false;
         }

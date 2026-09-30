@@ -448,7 +448,8 @@ void GuiManager::reconnectProtocolSession()
         ? screenRegistry.getVisualizationGui().reconnectAfterDisconnect()
         : deviceManager.reconnectProtocolLink();
     if (!connected) {
-        splashMessage("Reconnect failed. Check Board power and selected UART/BLE link, then retry.");
+        const std::string error = deviceManager.getLastError();
+        splashMessage(error.empty() ? "Reconnect failed without an error detail from the Board." : error.c_str());
         return;
     }
     connectionFeedback.hideDisconnect();

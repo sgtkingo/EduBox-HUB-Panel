@@ -57,6 +57,7 @@ private:
 
     bool initialized = false;                 ///< Initialization state flag
     ManagerStatus Status = ManagerStatus::STOPPED; ///< Current status of the manager
+    std::string lastError;                    ///< User-facing detail from the latest failed operation.
 
     std::vector<BaseDevice *> collectAssignedDevicesFromPinMap() const;
     std::vector<BaseDevice *> filterCompleteDevices(const std::vector<BaseDevice *> &devices) const;
@@ -99,6 +100,7 @@ public:
      */
     bool isRunning(){ return Status == ManagerStatus::RUNNING && !protocolClient.connectionLost(); }
     bool hasLostConnection() const { return protocolClient.connectionLost(); }
+    const std::string& getLastError() const { return lastError; }
     bool shouldPollProtocol() const { return protocolClient.isInitialized() && !protocolClient.connectionLost(); }
     void serviceProtocolLink(bool allowPing);
     bool reconnectDevice(BaseDevice *device);

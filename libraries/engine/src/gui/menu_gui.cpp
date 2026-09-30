@@ -356,7 +356,9 @@ void ConnectionGui::handleConnectButtonClick()
     const uint32_t loadingStart = showLoading("Connecting...");
     if (!deviceManager.connectAssignedDevice(device)) {
         finishLoading(loadingStart, false);
-        splashMessage("Device connection failed. Check cable and emulator.");
+        initializePins(); // CONNECT rollback removed the device from the pin map.
+        const std::string error = deviceManager.getLastError();
+        splashMessage(error.empty() ? "CONNECT failed without an error detail from the Board." : error.c_str());
         return;
     }
 
@@ -388,7 +390,8 @@ void ConnectionGui::handlePinClick(int pinIndex)
     BaseDevice *assignedDevice = deviceManager.getAssignedDevice(pinIndex);
     if (assignedDevice == device) {
         if (!deviceManager.unassignDeviceFromPin(pinIndex)) {
-            splashMessage("Failed to unassign device from pin.");
+            const std::string error = deviceManager.getLastError();
+            splashMessage(error.empty() ? "The selected pin could not be unassigned." : error.c_str());
         }
     } else if (assignedDevice == nullptr) {
         if (!device->canAssignMorePins()) {
@@ -396,7 +399,8 @@ void ConnectionGui::handlePinClick(int pinIndex)
             return;
         }
         if (!deviceManager.assignDeviceToPin(device, pinIndex)) {
-            splashMessage("Failed to assign device to pin.");
+            const std::string error = deviceManager.getLastError();
+            splashMessage(error.empty() ? "The selected pin could not be assigned." : error.c_str());
         }
     } else {
         splashMessage("This pin is used by another device.");

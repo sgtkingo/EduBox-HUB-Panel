@@ -165,7 +165,8 @@ void CommunicationSelectionGui::handleModeSelection(DefaultCommunicationMode mod
     const uint32_t loadingStart = showLoading("Connecting...");
     if (!deviceManager.initializeProtocolConnection()) {
         finishLoading(loadingStart, false);
-        splashMessage("Unable to establish connection. Check cable connection and emulator.");
+        const std::string error = deviceManager.getLastError();
+        splashMessage(error.empty() ? "INIT failed without an error detail from the Board." : error.c_str());
         return;
     }
 
@@ -526,7 +527,14 @@ void CommunicationSelectionGui::startWirelessConnection(bool remembered)
         for (size_t i = 0; i < 6; ++i) value = value * 10 + uint32_t(pin[i] - '0');
         wirelessPending = link->connectWireless(lv_dropdown_get_selected(wirelessPeers), value);
     }
-    if (!wirelessPending) { splashMessage("Unable to start BLE connection."); return; }
+    if (!wirelessPending) {
+        const auto info = link->info();
+        if (info.count == 0) splashMessage("No BLE Board is available. Run Scan and select a Board first.");
+        else if (lv_dropdown_get_selected(wirelessPeers) >= info.count)
+            splashMessage("The selected BLE Board is no longer in the scan results. Run Scan again.");
+        else splashMessage("The BLE link rejected the selected Board or PIN before connection started.");
+        return;
+    }
     lv_textarea_set_text(wirelessPin, ""); hideWirelessKeyboard();
     setWirelessFlow(WirelessFlow::Connecting, "Pairing and securing the BLE connection...");
 }
@@ -569,7 +577,9 @@ void CommunicationSelectionGui::refreshWireless()
     if (wirelessFlow == WirelessFlow::TargetScanning) {
         if (info.state == ProtocolLinkState::Scanning) return;
         if (info.state == ProtocolLinkState::Error) {
-            setWirelessFlow(WirelessFlow::Error, info.error); return;
+            setWirelessFlow(WirelessFlow::Error,
+                info.error[0] ? info.error : "BLE scan failed without an error detail.");
+            return;
         }
         for (size_t i = 0; i < info.count; ++i) {
             if (targetBoardId == info.peers[i].name) {
@@ -577,7 +587,11 @@ void CommunicationSelectionGui::refreshWireless()
                 if (wirelessPending) {
                     const std::string message = "Pairing with " + targetBoardId + "...";
                     setWirelessFlow(WirelessFlow::Connecting, message.c_str());
-                } else setWirelessFlow(WirelessFlow::Error, "BLE connection could not be started.");
+                } else {
+                    const std::string error = "BLE commissioning request for " + targetBoardId +
+                        " was rejected before connection started.";
+                    setWirelessFlow(WirelessFlow::Error, error.c_str());
+                }
                 return;
             }
         }
@@ -625,7 +639,8 @@ void CommunicationSelectionGui::refreshWireless()
     if (wirelessFlow != WirelessFlow::Connecting) return;
     if (info.state == ProtocolLinkState::Error) {
         wirelessPending = false;
-        setWirelessFlow(WirelessFlow::Error, info.error[0] ? info.error : "BLE connection failed.");
+        setWirelessFlow(WirelessFlow::Error,
+            info.error[0] ? info.error : "BLE connection ended without an error detail from the radio stack.");
         return;
     }
     if (info.state != ProtocolLinkState::Ready) return;
@@ -633,7 +648,10 @@ void CommunicationSelectionGui::refreshWireless()
     lv_label_set_text(wirelessInstruction, "BLE connected. Initializing protocol...");
     lv_refr_now(nullptr);
     if (!deviceManager.initializeProtocolConnection()) {
-        setWirelessFlow(WirelessFlow::Error, "BLE connected, but protocol initialization failed."); return;
+        const std::string error = deviceManager.getLastError();
+        setWirelessFlow(WirelessFlow::Error,
+            error.empty() ? "BLE connected, but INIT failed without an error detail from the Board." : error.c_str());
+        return;
     }
     const auto ready = link->info();
     const char *board = ready.rememberedBoardId[0] ? ready.rememberedBoardId :

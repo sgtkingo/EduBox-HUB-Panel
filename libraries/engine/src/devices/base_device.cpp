@@ -232,19 +232,19 @@ bool connectDevice(BaseDevice *device, RuntimeProtocolSession &protocolClient) {
         return device->connect(protocolClient);
     } catch (const Exception &ex) {
         ex.print();
-        device->setError(ex.flush(0));
+        device->setError(ex.Message);
         return false;
     }
     catch (const std::exception &e)
     {
-        std::string msg = buildMessage("Standard exception during synchronization: %s\n", e.what());
+        std::string msg = buildMessage("CONNECT internal error: %s", e.what());
         Exception("connectDevice", msg).print();
         device->setError(msg);
         return false;
     }
     catch(...)
     {
-        std::string msg = "Unknown exception during synchronization!\n";
+        std::string msg = "CONNECT failed because of an unknown internal error.";
         Exception("connectDevice", msg).print();
         device->setError(msg);
         return false;
@@ -268,19 +268,19 @@ bool disconnectDevice(BaseDevice *device, RuntimeProtocolSession &protocolClient
         return device->disconnect(protocolClient);
     } catch (const Exception &ex) {
         ex.print();
-        device->setError(ex.flush(0));
+        device->setError(ex.Message);
         return false;
     }
     catch (const std::exception &e)
     {
-        std::string msg = buildMessage("Standard exception during synchronization: %s\n", e.what());
+        std::string msg = buildMessage("DISCONNECT internal error: %s", e.what());
         Exception("disconnectDevice", msg).print();
         device->setError(msg);
         return false;
     }
     catch(...)
     {
-        std::string msg = "Unknown exception during synchronization!\n";
+        std::string msg = "DISCONNECT failed because of an unknown internal error.";
         Exception("disconnectDevice", msg).print();
         device->setError(msg);
         return false;
