@@ -51,5 +51,21 @@ class BleLifecycleTest(unittest.TestCase):
         self.assertIn("LV_EVENT_FOCUSED", show_wireless)
         self.assertIn("LV_EVENT_CLICKED", show_wireless)
 
+    def test_cable_commissioning_and_manual_settings_contract(self):
+        gui = (ROOT / "src/gui/communication_selection_gui.cpp").read_text(encoding="utf-8")
+        link = (ROOT.parents[1] / "ui/panel_protocol_link.hpp").read_text(encoding="utf-8")
+        self.assertIn("requestCablePairing(false)", gui)
+        self.assertIn("requestCablePairing(true)", gui)
+        self.assertIn("lv_tick_elaps(wirelessFlowStarted) >= 5000", gui)
+        self.assertIn("lv_tick_elaps(lastPairAttempt) >= 500", gui)
+        self.assertIn("targetBoardId == info.peers[i].name", gui)
+        self.assertIn("CablePairingStatus::AlreadyPaired", gui)
+        self.assertNotIn('addButton("Remembered"', gui)
+        self.assertIn('addButton("Connect"', gui)
+        self.assertIn('addButton("Scan"', gui)
+        self.assertIn('addButton("Forget pairing"', gui)
+        self.assertIn("client_.pair(resetExisting)", link)
+        self.assertIn("source.savedBoardId", link)
+
 if __name__ == "__main__":
     unittest.main()

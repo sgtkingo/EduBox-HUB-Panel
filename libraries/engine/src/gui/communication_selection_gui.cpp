@@ -258,6 +258,9 @@ void CommunicationSelectionGui::hideCommunicationSelection(void)
     if (wirelessTimer) { lv_timer_del(wirelessTimer); wirelessTimer = nullptr; }
     destroyWirelessKeyboard();
     wirelessPanel = wirelessStatus = wirelessPeers = wirelessPin = nullptr;
+    wirelessInstruction = wirelessSpinner = nullptr;
+    wirelessConnect = wirelessScan = wirelessForget = nullptr;
+    wirelessAction = wirelessContinue = wirelessBack = nullptr;
     wirelessPending = false;
     if (ui_Widget) {
         lv_obj_del(ui_Widget);
@@ -270,174 +273,272 @@ void CommunicationSelectionGui::hideCommunicationSelection(void)
     initialized = false;
 }
 
+void CommunicationSelectionGui::setWirelessFlow(WirelessFlow flow, const char *message)
+{
+    wirelessFlow = flow;
+    const bool manual = flow == WirelessFlow::Manual;
+    const bool working = flow == WirelessFlow::CablePairing ||
+        flow == WirelessFlow::TargetScanning || flow == WirelessFlow::Connecting;
+    const bool action = flow == WirelessFlow::AlreadyPaired || flow == WirelessFlow::Error;
+    auto show = [](lv_obj_t *object, bool visible) {
+        if (!object) return;
+        if (visible) lv_obj_clear_flag(object, LV_OBJ_FLAG_HIDDEN);
+        else lv_obj_add_flag(object, LV_OBJ_FLAG_HIDDEN);
+    };
+    show(wirelessStatus, manual); show(wirelessPeers, manual); show(wirelessPin, manual);
+    show(wirelessConnect, manual); show(wirelessScan, manual); show(wirelessForget, manual);
+    show(wirelessInstruction, !manual); show(wirelessSpinner, working);
+    show(wirelessAction, action); show(wirelessContinue, flow == WirelessFlow::Success);
+    if (message && wirelessInstruction) lv_label_set_text(wirelessInstruction, message);
+    if (wirelessAction) {
+        auto *label = lv_obj_get_child(wirelessAction, 0);
+        lv_label_set_text(label, flow == WirelessFlow::AlreadyPaired ?
+            "Forget Board & replace pairing" : "Retry");
+    }
+}
+
+void CommunicationSelectionGui::beginCablePairing()
+{
+    auto *link = deviceManager.getProtocolLinkControl();
+    if (!link) return;
+    hideWirelessKeyboard();
+    deviceManager.endProtocolSession();
+    link->selectCable();
+    targetBoardId.clear(); targetPin = 0;
+    wirelessFlowStarted = lv_tick_get();
+    lastPairAttempt = wirelessFlowStarted - 500;
+    setWirelessFlow(WirelessFlow::CablePairing,
+        "Connect the Board to the Panel with the UART cable.\n"
+        "Reading Board ID and PIN... (5 s)");
+}
+
+void CommunicationSelectionGui::beginTargetScan(const CablePairingInfo &pairing)
+{
+    auto *link = deviceManager.getProtocolLinkControl();
+    targetBoardId = pairing.boardId; targetPin = pairing.pin;
+    displayedPeerCount = static_cast<size_t>(-1);
+    const std::string message = "Board " + targetBoardId +
+        " found.\nScanning for its BLE signal...";
+    setWirelessFlow(WirelessFlow::TargetScanning, message.c_str());
+    link->scanWireless();
+}
+
 void CommunicationSelectionGui::showWireless(bool remembered)
 {
-    auto* link = deviceManager.getProtocolLinkControl();
-    if (!link) {
-        debugLogMessage(DEBUG_VERBOSE_ERRORS, "BLE.GUI", "open", "protocol link unavailable");
-        splashMessage("BLE transport unavailable in this build."); return;
-    }
-    debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "BLE.GUI", "open", "wireless panel requested autoRemembered=%d", remembered);
+    auto *link = deviceManager.getProtocolLinkControl();
+    if (!link) { splashMessage("BLE transport unavailable in this build."); return; }
     deviceManager.endProtocolSession();
+    wirelessCompletionMode = remembered ? DefaultCommunicationMode::WIRELESS_AUTO
+                                        : DefaultCommunicationMode::WIRELESS_MANUAL;
     if (!wirelessPanel) {
         wirelessPanel = lv_obj_create(ui_Widget);
-        lv_obj_set_size(wirelessPanel, 720, 410);
-        lv_obj_center(wirelessPanel);
+        lv_obj_set_size(wirelessPanel, 720, 410); lv_obj_center(wirelessPanel);
         lv_obj_set_style_bg_color(wirelessPanel, lv_color_hex(0xFFFFFF), 0);
-        lv_obj_t* title = lv_label_create(wirelessPanel);
+        auto *title = lv_label_create(wirelessPanel);
         lv_label_set_text(title, "EduBox Board - Bluetooth LE");
-        lv_obj_set_pos(title, 12, 4);
+        lv_obj_set_pos(title, 12, 4); lv_obj_set_style_text_font(title, &lv_font_montserrat_24, 0);
         wirelessStatus = lv_label_create(wirelessPanel);
-        lv_obj_set_width(wirelessStatus, 670); lv_obj_set_pos(wirelessStatus, 12, 34);
+        lv_obj_set_width(wirelessStatus, 670); lv_obj_set_pos(wirelessStatus, 12, 38);
+        wirelessInstruction = lv_label_create(wirelessPanel);
+        lv_obj_set_width(wirelessInstruction, 620);
+        lv_obj_set_style_text_align(wirelessInstruction, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_align(wirelessInstruction, LV_ALIGN_CENTER, 0, -32);
+        wirelessSpinner = lv_spinner_create(wirelessPanel, 900, 60);
+        lv_obj_set_size(wirelessSpinner, 46, 46);
+        lv_obj_align(wirelessSpinner, LV_ALIGN_CENTER, 0, 52);
         wirelessPeers = lv_dropdown_create(wirelessPanel);
-        lv_obj_set_size(wirelessPeers, 670, 42); lv_obj_set_pos(wirelessPeers, 12, 78);
+        lv_obj_set_size(wirelessPeers, 520, 44); lv_obj_set_pos(wirelessPeers, 12, 88);
         lv_dropdown_set_options(wirelessPeers, "Scan for Boards...");
         wirelessPin = lv_textarea_create(wirelessPanel);
-        lv_obj_set_size(wirelessPin, 165, 44); lv_obj_set_pos(wirelessPin, 12, 134);
+        lv_obj_set_size(wirelessPin, 180, 44); lv_obj_set_pos(wirelessPin, 12, 148);
         lv_textarea_set_one_line(wirelessPin, true); lv_textarea_set_max_length(wirelessPin, 6);
         lv_textarea_set_accepted_chars(wirelessPin, "0123456789");
-        lv_textarea_set_placeholder_text(wirelessPin, "6-digit Board PIN");
+        lv_textarea_set_placeholder_text(wirelessPin, "Board PIN");
         lv_textarea_set_password_mode(wirelessPin, true);
-        lv_obj_add_event_cb(wirelessPin, [](lv_event_t* e) {
+        lv_obj_add_event_cb(wirelessPin, [](lv_event_t *e) {
             const auto code = lv_event_get_code(e);
-            auto* self = static_cast<CommunicationSelectionGui*>(lv_event_get_user_data(e));
+            auto *self = static_cast<CommunicationSelectionGui *>(lv_event_get_user_data(e));
             if (code == LV_EVENT_FOCUSED || code == LV_EVENT_CLICKED) self->showWirelessKeyboard();
             else if (code == LV_EVENT_READY || code == LV_EVENT_CANCEL) self->hideWirelessKeyboard();
         }, LV_EVENT_ALL, this);
-        lv_obj_t* pinHint = lv_label_create(wirelessPanel);
-        lv_label_set_text(pinHint, "Tap the PIN field to open the keypad");
-        lv_obj_set_pos(pinHint, 196, 146);
-        auto addButton = [this](const char* text, int x, int y, lv_event_cb_t callback) {
-            auto* button = lv_btn_create(wirelessPanel);
-            lv_obj_set_size(button, 145, 40); lv_obj_set_pos(button, x, y);
+        auto addButton = [this](const char *text, int x, int y, int width, int height,
+                                uint32_t color, lv_event_cb_t callback) {
+            auto *button = lv_btn_create(wirelessPanel);
+            lv_obj_set_size(button, width, height); lv_obj_set_pos(button, x, y);
+            lv_obj_set_style_bg_color(button, lv_color_hex(color), 0);
             lv_obj_add_event_cb(button, callback, LV_EVENT_CLICKED, this);
-            auto* label = lv_label_create(button); lv_label_set_text(label, text); lv_obj_center(label);
+            auto *label = lv_label_create(button);
+            lv_label_set_text(label, text); lv_obj_center(label);
+            return button;
         };
-        addButton("Connect selected", 12, 294, [](lv_event_t* e) {
-            static_cast<CommunicationSelectionGui*>(lv_event_get_user_data(e))->startWirelessConnection(false);
+        wirelessConnect = addButton("Connect", 12, 214, 180, 52, 0x2E9D55, [](lv_event_t *e) {
+            static_cast<CommunicationSelectionGui *>(lv_event_get_user_data(e))->startWirelessConnection(false);
         });
-        addButton("Scan", 182, 294, [](lv_event_t* e) {
-            auto* self = static_cast<CommunicationSelectionGui*>(lv_event_get_user_data(e));
-            self->hideWirelessKeyboard();
-            self->wirelessPending = false; self->displayedPeerCount = static_cast<size_t>(-1);
+        wirelessScan = addButton("Scan", 550, 92, 120, 38, 0x1677C8, [](lv_event_t *e) {
+            auto *self = static_cast<CommunicationSelectionGui *>(lv_event_get_user_data(e));
+            self->hideWirelessKeyboard(); self->displayedPeerCount = static_cast<size_t>(-1);
             self->deviceManager.getProtocolLinkControl()->scanWireless();
         });
-        addButton("Remembered", 352, 294, [](lv_event_t* e) {
-            static_cast<CommunicationSelectionGui*>(lv_event_get_user_data(e))->startWirelessConnection(true);
-        });
-        addButton("Forget peer", 522, 294, [](lv_event_t* e) {
-            auto* self = static_cast<CommunicationSelectionGui*>(lv_event_get_user_data(e));
-            self->hideWirelessKeyboard();
-            self->wirelessPending = false;
+        wirelessForget = addButton("Forget pairing", 12, 282, 220, 52, 0xC73535, [](lv_event_t *e) {
+            auto *self = static_cast<CommunicationSelectionGui *>(lv_event_get_user_data(e));
+            self->hideWirelessKeyboard(); self->wirelessPending = false;
             self->deviceManager.getProtocolLinkControl()->forgetWireless();
             lv_textarea_set_text(self->wirelessPin, "");
         });
-        addButton("Back / cancel", 12, 348, [](lv_event_t* e) {
-            static_cast<CommunicationSelectionGui*>(lv_event_get_user_data(e))->closeWireless();
+        wirelessAction = addButton("Retry", 225, 268, 270, 50, 0xC73535, [](lv_event_t *e) {
+            auto *self = static_cast<CommunicationSelectionGui *>(lv_event_get_user_data(e));
+            auto *link = self->deviceManager.getProtocolLinkControl();
+            if (self->wirelessFlow == WirelessFlow::AlreadyPaired) {
+                self->setWirelessFlow(WirelessFlow::CablePairing, "Resetting existing Board pairing...");
+                const auto pairing = link->requestCablePairing(true);
+                if (pairing.status == CablePairingStatus::Ok) self->beginTargetScan(pairing);
+                else self->setWirelessFlow(WirelessFlow::Error,
+                    pairing.error[0] ? pairing.error : "Unable to reset Board pairing.");
+                return;
+            }
+            if (self->wirelessCompletionMode == DefaultCommunicationMode::WIRELESS_MANUAL) {
+                self->setWirelessFlow(WirelessFlow::Manual);
+                self->displayedPeerCount = static_cast<size_t>(-1);
+                link->scanWireless();
+                return;
+            }
+            const auto info = link->info();
+            if (self->wirelessCompletionMode == DefaultCommunicationMode::WIRELESS_AUTO &&
+                info.rememberedAddress[0]) {
+                self->setWirelessFlow(WirelessFlow::Connecting, "Connecting to remembered Board...");
+                self->wirelessPending = link->connectRemembered();
+                if (!self->wirelessPending)
+                    self->setWirelessFlow(WirelessFlow::Error, "Remembered Board is unavailable.");
+            } else self->beginCablePairing();
         });
-        auto* hint = lv_label_create(wirelessPanel);
-        lv_label_set_text(hint, "First pairing: read PIN on Board console.\nBoard BOOT held 3 s after boot resets bonding.");
-        lv_obj_set_pos(hint, 182, 350); lv_obj_set_width(hint, 490);
-        wirelessTimer = lv_timer_create([](lv_timer_t* timer) {
-            static_cast<CommunicationSelectionGui*>(timer->user_data)->refreshWireless();
+        wirelessContinue = addButton("Continue", 260, 270, 200, 52, 0x2E9D55, [](lv_event_t *e) {
+            auto *self = static_cast<CommunicationSelectionGui *>(lv_event_get_user_data(e));
+            self->router.completeCommunicationSelection(self->wirelessCompletionMode);
+        });
+        wirelessBack = addButton("Back / Cancel", 12, 350, 145, 40, 0x59636E, [](lv_event_t *e) {
+            static_cast<CommunicationSelectionGui *>(lv_event_get_user_data(e))->closeWireless();
+        });
+        wirelessTimer = lv_timer_create([](lv_timer_t *timer) {
+            static_cast<CommunicationSelectionGui *>(timer->user_data)->refreshWireless();
         }, 200, this);
     }
     lv_obj_clear_flag(wirelessPanel, LV_OBJ_FLAG_HIDDEN);
-    hideWirelessKeyboard();
-    const bool hasRememberedPeer = link->info().rememberedAddress[0] != 0;
-    debugLogMessage(DEBUG_VERBOSE_ALL, "BLE.GUI", "open", "panel ready rememberedPeer=%d", hasRememberedPeer);
-    if (remembered && hasRememberedPeer) startWirelessConnection(true);
-    else { displayedPeerCount = static_cast<size_t>(-1); link->scanWireless(); }
+    hideWirelessKeyboard(); wirelessPending = false;
+    const auto info = link->info();
+    if (!remembered) {
+        setWirelessFlow(WirelessFlow::Manual);
+        displayedPeerCount = static_cast<size_t>(-1); link->scanWireless();
+    } else if (info.rememberedAddress[0]) {
+        const std::string message = std::string("Connecting to ") +
+            (info.rememberedBoardId[0] ? info.rememberedBoardId : info.rememberedAddress) + "...";
+        setWirelessFlow(WirelessFlow::Connecting, message.c_str());
+        wirelessPending = link->connectRemembered();
+        if (!wirelessPending) setWirelessFlow(WirelessFlow::Error, "Remembered Board is unavailable.");
+    } else beginCablePairing();
 }
 
 void CommunicationSelectionGui::startWirelessConnection(bool remembered)
 {
-    auto* link = deviceManager.getProtocolLinkControl();
-    if (!link || wirelessPending) {
-        debugLogMessage(DEBUG_VERBOSE_ALL, "BLE.GUI", "connect ignored", "link=%d pending=%d", link != nullptr, wirelessPending);
-        return;
-    }
-    const auto info = link->info();
-    if (info.state == ProtocolLinkState::Scanning || info.state == ProtocolLinkState::Connecting ||
-        info.state == ProtocolLinkState::Securing) {
-        debugLogMessage(DEBUG_VERBOSE_ALL, "BLE.GUI", "connect ignored", "BLE busy state=%u",
-            static_cast<unsigned>(info.state));
-        return;
-    }
-    debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "BLE.GUI", "connect", "request mode=%s peers=%u selected=%u",
-        remembered ? "remembered" : "manual", static_cast<unsigned>(info.count),
-        wirelessPeers ? static_cast<unsigned>(lv_dropdown_get_selected(wirelessPeers)) : 0U);
-    if (remembered) {
-        if (!link->connectRemembered()) {
-            debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "BLE.GUI", "connect rejected", "remembered peer unavailable");
-            splashMessage("No bonded Board remembered. Scan and pair first."); return;
-        }
-    } else {
-        const char* pin = lv_textarea_get_text(wirelessPin);
+    auto *link = deviceManager.getProtocolLinkControl();
+    if (!link || wirelessPending) return;
+    if (remembered) wirelessPending = link->connectRemembered();
+    else {
+        const char *pin = lv_textarea_get_text(wirelessPin);
         if (std::strlen(pin) != 6) {
-            debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "BLE.GUI", "connect rejected", "commissioning PIN length invalid");
-            splashMessage("Enter the six-digit PIN from the Board console."); return;
+            splashMessage("Enter the six-digit PIN printed on the Board label."); return;
         }
         uint32_t value = 0;
         for (size_t i = 0; i < 6; ++i) value = value * 10 + uint32_t(pin[i] - '0');
-        if (!link->connectWireless(lv_dropdown_get_selected(wirelessPeers), value)) {
-            debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "BLE.GUI", "connect rejected", "central rejected selected peer or PIN format");
-            return;
-        }
+        wirelessPending = link->connectWireless(lv_dropdown_get_selected(wirelessPeers), value);
     }
-    lv_textarea_set_text(wirelessPin, ""); // PIN is never saved.
-    hideWirelessKeyboard();
-    wirelessPending = true;
-    debugLogMessage(DEBUG_VERBOSE_ALL, "BLE.GUI", "connect", "request queued; PIN field cleared");
+    if (!wirelessPending) { splashMessage("Unable to start BLE connection."); return; }
+    lv_textarea_set_text(wirelessPin, ""); hideWirelessKeyboard();
+    setWirelessFlow(WirelessFlow::Connecting, "Pairing and securing the BLE connection...");
 }
 
 void CommunicationSelectionGui::refreshWireless()
 {
     if (!wirelessPanel || lv_obj_has_flag(wirelessPanel, LV_OBJ_FLAG_HIDDEN)) return;
-    auto* link = deviceManager.getProtocolLinkControl();
+    auto *link = deviceManager.getProtocolLinkControl();
+    if (!link) return;
     const auto info = link->info();
-    const char* states[] = {"Off", "Idle", "Scanning...", "Connecting...", "Securing...", "Ready", "Retrying...", "Error"};
-    lv_label_set_text_fmt(wirelessStatus, "%s  MTU %u  %s\nRemembered: %s",
-        states[static_cast<unsigned>(info.state)], unsigned(info.mtu), info.error, info.rememberedAddress);
-    if (info.state != ProtocolLinkState::Scanning && displayedPeerCount != info.count) {
-        std::string options;
-        for (size_t i = 0; i < info.count; ++i) {
-            if (i) options += "\n";
-            options += std::string(info.peers[i].name) + "  " + info.peers[i].address +
-                "  (" + std::to_string(info.peers[i].rssi) + " dBm)";
+    if (wirelessFlow == WirelessFlow::CablePairing) {
+        if (lv_tick_elaps(wirelessFlowStarted) >= 5000) {
+            setWirelessFlow(WirelessFlow::Error,
+                "No PAIR response in 5 seconds.\nCheck the UART cable and try again."); return;
         }
-        lv_dropdown_set_options(wirelessPeers, options.empty() ? "No Board — try Scan" : options.c_str());
-        displayedPeerCount = info.count;
+        if (lv_tick_elaps(lastPairAttempt) >= 500) {
+            lastPairAttempt = lv_tick_get();
+            const auto pairing = link->requestCablePairing(false);
+            if (pairing.status == CablePairingStatus::Ok) beginTargetScan(pairing);
+            else if (pairing.status == CablePairingStatus::AlreadyPaired)
+                setWirelessFlow(WirelessFlow::AlreadyPaired,
+                    "This Board is already paired.\nReplace its existing pairing?");
+        }
+        return;
     }
-    if (!wirelessPending) return;
+    if (wirelessFlow == WirelessFlow::TargetScanning) {
+        if (info.state == ProtocolLinkState::Scanning) return;
+        if (info.state == ProtocolLinkState::Error) {
+            setWirelessFlow(WirelessFlow::Error, info.error); return;
+        }
+        for (size_t i = 0; i < info.count; ++i) {
+            if (targetBoardId == info.peers[i].name) {
+                wirelessPending = link->connectWireless(i, targetPin); targetPin = 0;
+                if (wirelessPending) {
+                    const std::string message = "Pairing with " + targetBoardId + "...";
+                    setWirelessFlow(WirelessFlow::Connecting, message.c_str());
+                } else setWirelessFlow(WirelessFlow::Error, "BLE connection could not be started.");
+                return;
+            }
+        }
+        const std::string message = "Board " + targetBoardId +
+            " was not found over BLE.\nMove it closer and retry.";
+        setWirelessFlow(WirelessFlow::Error, message.c_str()); return;
+    }
+    if (wirelessFlow == WirelessFlow::Manual) {
+        const char *states[] = {"Off", "Ready to scan", "Scanning...", "Connecting...",
+            "Securing...", "Connected", "Retrying...", "Error"};
+        lv_label_set_text_fmt(wirelessStatus, "%s   %s",
+            states[static_cast<unsigned>(info.state)], info.error);
+        if (info.state != ProtocolLinkState::Scanning && displayedPeerCount != info.count) {
+            std::string options;
+            for (size_t i = 0; i < info.count; ++i) {
+                if (i) options += "\n";
+                options += std::string(info.peers[i].name) + "  (" +
+                    std::to_string(info.peers[i].rssi) + " dBm)";
+            }
+            lv_dropdown_set_options(wirelessPeers,
+                options.empty() ? "No Board found - tap Scan" : options.c_str());
+            displayedPeerCount = info.count;
+        }
+        return;
+    }
+    if (wirelessFlow != WirelessFlow::Connecting) return;
     if (info.state == ProtocolLinkState::Error) {
-        debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "BLE.GUI", "connect failed", "error=%s", info.error);
-        wirelessPending = false; return;
+        wirelessPending = false;
+        setWirelessFlow(WirelessFlow::Error, info.error[0] ? info.error : "BLE connection failed.");
+        return;
     }
     if (info.state != ProtocolLinkState::Ready) return;
     wirelessPending = false;
-    // Still in the main GUI owner context, never in a BLE callback.
-    lv_label_set_text(wirelessStatus, "BLE ready. Initializing VSCP...");
+    lv_label_set_text(wirelessInstruction, "BLE connected. Initializing protocol...");
     lv_refr_now(nullptr);
-    debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "BLE.GUI", "VSCP initialization", "BLE ready; starting VSCP INIT mtu=%u",
-        static_cast<unsigned>(info.mtu));
     if (!deviceManager.initializeProtocolConnection()) {
-        debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "BLE.GUI", "VSCP initialization", "VSCP INIT failed");
-        lv_label_set_text(wirelessStatus, "VSCP INIT failed: Board busy / firmware mismatch. Retry Connect.");
-        return;
+        setWirelessFlow(WirelessFlow::Error, "BLE connected, but protocol initialization failed."); return;
     }
-    debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "BLE.GUI", "VSCP initialization", "VSCP INIT completed");
-    router.completeCommunicationSelection(DefaultCommunicationMode::WIRELESS_MANUAL);
-    // Navigation deletes this panel/timer: do not touch any GUI object hereafter.
+    const auto ready = link->info();
+    const char *board = ready.rememberedBoardId[0] ? ready.rememberedBoardId :
+        (targetBoardId.empty() ? "Board" : targetBoardId.c_str());
+    const std::string message = std::string(LV_SYMBOL_OK) + "  Success!\n" + board + " is ready.";
+    setWirelessFlow(WirelessFlow::Success, message.c_str());
 }
 
 void CommunicationSelectionGui::closeWireless()
 {
-    debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "BLE.GUI", "close", "wireless workflow cancelled by user");
-    hideWirelessKeyboard();
-    wirelessPending = false;
-    deviceManager.getProtocolLinkControl()->stopWireless();
-    lv_obj_add_flag(wirelessPanel, LV_OBJ_FLAG_HIDDEN);
+    hideWirelessKeyboard(); wirelessPending = false; targetPin = 0;
+    if (auto *link = deviceManager.getProtocolLinkControl()) link->stopWireless();
+    if (wirelessPanel) lv_obj_add_flag(wirelessPanel, LV_OBJ_FLAG_HIDDEN);
 }
 
 void CommunicationSelectionGui::showWirelessKeyboard()

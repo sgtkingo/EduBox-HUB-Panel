@@ -15,7 +15,7 @@ struct Snapshot {
   LinkState state = LinkState::Off;
   std::array<Peer, 8> peers{};
   size_t count = 0;
-  char savedAddress[18]{}, error[96]{};
+  char savedAddress[18]{}, savedBoardId[40]{}, error[96]{};
   uint16_t mtu = 23;
 };
 // Worker owns blocking GAP/GATT API; callbacks never call VSCP/LVGL.

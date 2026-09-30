@@ -30,7 +30,7 @@
 
 // Unified project debug logging switch. Exceptions use error level 1.
 #ifndef ENABLE_DEBUG
-#define ENABLE_DEBUG 1
+#define ENABLE_DEBUG 0
 #endif
 
 // Debug verbosity:

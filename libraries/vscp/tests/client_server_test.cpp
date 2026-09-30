@@ -76,7 +76,15 @@ int main() {
   std::map<vscp::String, vscp::String> configuredValues;
   std::map<vscp::String, vscp::String> controlledValues;
   bool connected = false;
+  bool pairReset = false;
 
+  server.on(vscp::Command::Pair, [&](const vscp::Request& request) {
+    pairReset = request.value("reset") == "1";
+    vscp::Response response = vscp::Response::ok();
+    response.parameters["board_id"] = "EB-A4CF-129B73E8";
+    response.parameters["pin"] = "483271";
+    return response;
+  });
   server.on(vscp::Command::Init, [](const vscp::Request& request) {
     return request.value("api") == vscp::API_VERSION
                ? vscp::Response::ok()
@@ -125,6 +133,16 @@ int main() {
   });
 
   vscp::Client client(clientTransport, 100);
+  const vscp::ResponseStatus pair = client.pair();
+  assert(pair.status == vscp::Status::Ok);
+  assert(pair.parameters.at("board_id") == "EB-A4CF-129B73E8");
+  assert(pair.parameters.at("pin") == "483271");
+  assert(pair.parameters.count("seq") == 1); // PAIR is sequenced in legacy mode.
+  assert(!pairReset);
+  const vscp::ResponseStatus replacement = client.pair(true);
+  assert(replacement.status == vscp::Status::Ok);
+  assert(pairReset);
+
   const vscp::ResponseStatus beforeInit = client.update("S01");
   assert(beforeInit.status == vscp::Status::Error);
   assert(beforeInit.error == "Protocol not initialized");

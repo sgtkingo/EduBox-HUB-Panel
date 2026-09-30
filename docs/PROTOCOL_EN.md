@@ -1,6 +1,6 @@
 # VSCP Protocol
 
-VSCP (Virtual Sensors Communication Protocol) is a simple text-based protocol for communication between the EduBox HUB Panel HMI/firmware and a target board, real device, or emulator. The current project implementation uses VSCP API `1.4`.
+VSCP (Virtual Sensors Communication Protocol) is a simple text-based protocol for communication between the EduBox HUB Panel HMI/firmware and a target board, real device, or emulator. The current project implementation uses VSCP API `1.6`.
 
 The protocol follows a request-response model. The HMI always sends one command, and the counterpart responds with one response message. Runtime polling, configuration, control values, and pin assignment are all built on the same format.
 
@@ -153,6 +153,7 @@ Configs are persistent or setup parameters and are sent via `CONFIG`.
 | `CONNECT` | `?type=CONNECT&id=<uid>&pins=<csv>` | `?id=<uid>&status=1` | Connects a device to physical pins |
 | `DISCONNECT` | `?type=DISCONNECT&id=<uid>` | `?id=<uid>&status=1` | Disconnects a device from pins |
 | `UPDATE` | `?type=UPDATE&id=<uid>` | `?id=<uid>&status=1&key=value...` | Reads runtime read values |
+| `PAIR` | `?type=PAIR&seq=<n>[&reset=1]` | `?seq=<n>&status=1&board_id=<id>&pin=<pin>` | UART-only BLE commissioning before `INIT` |
 | `CONFIG` | `?type=CONFIG&id=<uid>&key=value...` | `?id=<uid>&status=1` | Writes device configuration |
 | `CONTROL` | `?type=CONTROL&id=<uid>&key=value...` | `?id=<uid>&status=1` | Writes runtime output/control values |
 | `RESET` | `?type=RESET&id=<uid>` | `?id=<uid>&status=1` | Resets the device or runtime state |
@@ -164,7 +165,7 @@ Configs are persistent or setup parameters and are sent via `CONFIG`.
 Current full request:
 
 ```text
-?type=INIT&app=board&db=1.0&api=1.4
+?type=INIT&app=board&db=1.0&api=1.6
 ```
 
 Required/optional parameters:
@@ -404,6 +405,33 @@ Special emulator request:
 
 This clears `sensor_configs`, `control_values`, and `connected_sensors`.
 
+## PAIR
+
+`PAIR` is a commissioning request and is valid before `INIT`. The EduBox Board
+application accepts it only on its physical UART2 link; USB and BLE requests are
+rejected. The client always adds `seq`, and the response echoes it.
+
+```text
+?type=PAIR&seq=1
+?seq=1&status=1&board_id=EB-A4CF-129B73E8&pin=483271
+```
+
+`board_id` is the exact text printed on the Board label and advertised as its
+BLE name. `pin` is the six-digit PIN printed on the same label. If a bond already
+exists, ordinary PAIR returns `status=0&error=already_paired`. Replacement must
+be explicit:
+
+```text
+?type=PAIR&seq=2&reset=1
+?seq=2&status=1&board_id=EB-A4CF-129B73E8&pin=483271
+```
+
+The Board application erases its old bond and opens a limited pairing window
+before returning success. The Panel retries ordinary PAIR about every 500 ms for
+at most five seconds, then scans for an exact `board_id` match. PIN derivation and
+the application key are Board application policy, not part of VSCP or edubox-ble.
+
+
 ## Typical Dataflow
 
 ### Cable Connection
@@ -417,7 +445,7 @@ sequenceDiagram
 
     UI->>DM: ensureProtocolInitialized()
     DM->>P: init(app, db)
-    P->>HW: ?type=INIT&app=board&db=1.0&api=1.4
+    P->>HW: ?type=INIT&app=board&db=1.0&api=1.6
     HW-->>P: ?status=1
     P-->>DM: OK
     DM-->>UI: connection ready
@@ -507,7 +535,7 @@ These exceptions should be printed in a catch handler using `Exception::print()`
 ### Sensor CPU Temp
 
 ```text
-HMI -> HW: ?type=INIT&app=board&db=1.0&api=1.4
+HMI -> HW: ?type=INIT&app=board&db=1.0&api=1.6
 HW -> HMI: ?status=1
 
 HMI -> HW: ?type=CONNECT&id=cpu_temp&pins=1
@@ -523,7 +551,7 @@ HW -> HMI: ?id=cpu_temp&status=1
 ### Actuator PWM LED Driver
 
 ```text
-HMI -> HW: ?type=INIT&app=board&db=1.0&api=1.4
+HMI -> HW: ?type=INIT&app=board&db=1.0&api=1.6
 HW -> HMI: ?status=1
 
 HMI -> HW: ?type=CONNECT&id=A00&pins=3
@@ -539,7 +567,7 @@ HW -> HMI: ?id=A00&status=1
 ### Hybrid Temperature Regulator
 
 ```text
-HMI -> HW: ?type=INIT&app=board&db=1.0&api=1.4
+HMI -> HW: ?type=INIT&app=board&db=1.0&api=1.6
 HW -> HMI: ?status=1
 
 HMI -> HW: ?type=CONNECT&id=H00&pins=3,5,6
@@ -576,7 +604,7 @@ HW -> HMI: ?id=H00&status=1&temp=32
 ## Current Limitations
 
 - Without URL encoding, values containing `&` or `=` are not safe.
-- The protocol has no checksum or sequence ID.
+- The BLE envelope provides ordered delivery; VSCP optionally correlates transactions with `seq`.
 - Request-response is synchronous; parallel requests over the same UART stream are not supported.
 - Timeout handling is simple, and a response without a `\n` line ending will not be read.
-- Wireless transport is not implemented yet.
+- BLE is implemented as a transport; radio pairing and reconnect policy remain application concerns.

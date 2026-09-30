@@ -47,5 +47,13 @@ Bonded-only reconnect never enters a substitute PIN or accepts numeric-compariso
 pairing. A missing bond requires explicit manual commissioning with the Board PIN;
 automatic connections also verify the resolved identity against the saved peer.
 
+Commissioning identity is supplied by the Board application. `Peripheral::begin`
+takes the exact printable Board ID and a six-digit PIN; the shared BLE library
+does not generate either value and does not contain the application HMAC key.
+The advertised name, physical label and Panel GUI must use the same Board ID.
+After authenticated bonding, Central persists both the BLE identity address and
+Board ID. `paired()`, `openPairingWindow()` and `forgetBond()` let the application
+enforce cable-authorized first pairing and explicit replacement.
+
 python libraries/edubox-ble/tests/run_tests.py runs framing and real VSCP-over-
 Channel integration at MTU 23. It does not test radio, NVS or physical outputs.

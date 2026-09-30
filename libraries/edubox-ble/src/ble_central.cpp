@@ -262,10 +262,13 @@ bool Central::connect(const Peer& peer, uint32_t pin, uint32_t epoch) {
   {
     std::lock_guard<std::mutex> lock(stateMutex_);
     if (epoch == requestEpoch_.load()) {
-      saved = preferences_.putUChar("type", id.getType()) && preferences_.putString("peer", id.toString().c_str());
+      saved = preferences_.putUChar("type", id.getType()) &&
+          preferences_.putString("peer", id.toString().c_str()) &&
+          preferences_.putString("name", peer.name);
       if (saved) {
         saved_ = peer; copy(saved_.address, id.toString().c_str()); saved_.type = id.getType();
-        copy(snapshot_.savedAddress, saved_.address); snapshot_.mtu = client_->getMTU();
+        copy(snapshot_.savedAddress, saved_.address); copy(snapshot_.savedBoardId, saved_.name);
+        snapshot_.mtu = client_->getMTU();
       }
     }
   }
@@ -295,14 +298,16 @@ void Central::run() {
     vTaskDelete(nullptr); return;
   }
   copy(saved_.address, preferences_.getString("peer", "").c_str());
+  copy(saved_.name, preferences_.getString("name", "").c_str());
   saved_.type = preferences_.getUChar("type", 0);
   {
-    std::lock_guard<std::mutex> lock(stateMutex_); copy(snapshot_.savedAddress, saved_.address);
+    std::lock_guard<std::mutex> lock(stateMutex_);
+    copy(snapshot_.savedAddress, saved_.address); copy(snapshot_.savedBoardId, saved_.name);
   }
   log(LogLevel::Important, "initialization", "NimBLE ready rememberedPeer=%d", saved_.address[0] != 0);
   if (saved_.address[0]) {
-    log(LogLevel::Detail, "initialization", "remembered address=%s type=%u", saved_.address,
-        static_cast<unsigned>(saved_.type));
+    log(LogLevel::Detail, "initialization", "remembered boardId=%s address=%s type=%u",
+        saved_.name[0] ? saved_.name : "-", saved_.address, static_cast<unsigned>(saved_.type));
   }
   NimBLEDevice::setMTU(247);
   NimBLEDevice::setSecurityAuth(true, true, true);
@@ -350,7 +355,7 @@ void Central::run() {
         vTaskDelay(pdMS_TO_TICKS(5)); continue;
       }
       std::lock_guard<std::mutex> lock(stateMutex_);
-      saved_ = Peer(); snapshot_.savedAddress[0] = 0;
+      saved_ = Peer(); snapshot_.savedAddress[0] = 0; snapshot_.savedBoardId[0] = 0;
       log(LogLevel::Important, "bond storage", "all local BLE bonds and remembered identity erased");
     }
     if (command == Command::Stop || command == Command::Forget) setState(LinkState::Idle, "", epoch);

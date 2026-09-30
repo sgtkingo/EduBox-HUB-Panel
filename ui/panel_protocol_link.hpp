@@ -37,6 +37,37 @@ public:
             "BLE.PanelLink", "transport selection", "cable selected changed=%d sequence=0 timeoutMs=%lu",
             changed, static_cast<unsigned long>(vscp::DEFAULT_TIMEOUT_MS));
     }
+    CablePairingInfo requestCablePairing(bool resetExisting = false) override {
+        if (wireless_) selectCable();
+        const auto response = client_.pair(resetExisting);
+        CablePairingInfo result;
+        if (response.status != vscp::Status::Ok) {
+            result.status = response.error == "already_paired"
+                ? CablePairingStatus::AlreadyPaired : CablePairingStatus::Error;
+            std::snprintf(result.error, sizeof(result.error), "%s", response.error.c_str());
+            return result;
+        }
+        const auto board = response.parameters.find("board_id");
+        const auto pin = response.parameters.find("pin");
+        if (board == response.parameters.end() || board->second.length() == 0 ||
+            pin == response.parameters.end() || pin->second.length() != 6) {
+            std::snprintf(result.error, sizeof(result.error), "%s", "Invalid PAIR response");
+            return result;
+        }
+        uint32_t pinValue = 0;
+        for (size_t i = 0; i < 6; ++i) {
+            const char digit = pin->second[i];
+            if (digit < '0' || digit > '9') {
+                std::snprintf(result.error, sizeof(result.error), "%s", "Invalid PAIR PIN");
+                return result;
+            }
+            pinValue = pinValue * 10 + uint32_t(digit - '0');
+        }
+        result.status = CablePairingStatus::Ok;
+        result.pin = pinValue;
+        std::snprintf(result.boardId, sizeof(result.boardId), "%s", board->second.c_str());
+        return result;
+    }
     void scanWireless() override { selectWireless(); central_.scan(); }
     bool connectWireless(size_t index, uint32_t pin) override { selectWireless(); return central_.select(index, pin); }
     bool connectRemembered() override { selectWireless(); return central_.connectSaved(); }
@@ -61,6 +92,7 @@ public:
         result.state = static_cast<ProtocolLinkState>(source.state);
         result.count = source.count; result.mtu = source.mtu;
         std::snprintf(result.rememberedAddress, sizeof(result.rememberedAddress), "%s", source.savedAddress);
+        std::snprintf(result.rememberedBoardId, sizeof(result.rememberedBoardId), "%s", source.savedBoardId);
         std::snprintf(result.error, sizeof(result.error), "%s", source.error);
         for (size_t i = 0; i < result.count; ++i) {
             std::snprintf(result.peers[i].address, sizeof(result.peers[i].address), "%s", source.peers[i].address);
