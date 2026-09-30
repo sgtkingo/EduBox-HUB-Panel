@@ -11,7 +11,7 @@ class CommunicationSelectionGui
 {
 private:
     GuiRouter &router;
-    enum class WirelessFlow : uint8_t { Manual, CablePairing, AlreadyPaired, TargetScanning, Connecting, Success, Error };
+    enum class WirelessFlow : uint8_t { Manual, CablePairing, AlreadyPaired, LocalForgetting, TargetScanning, Connecting, Success, Forgotten, Error };
     WirelessFlow wirelessFlow = WirelessFlow::Manual;
     DefaultCommunicationMode wirelessCompletionMode = DefaultCommunicationMode::WIRELESS_MANUAL;
     std::string targetBoardId;
@@ -22,10 +22,13 @@ private:
     lv_obj_t *wirelessConnect = nullptr, *wirelessScan = nullptr, *wirelessForget = nullptr;
     lv_obj_t *wirelessAction = nullptr, *wirelessContinue = nullptr, *wirelessBack = nullptr;
     bool connectionBusy = false;
+    bool cableForgetOnly = false, localForgetForPairing = false;
 
     lv_obj_t *ui_Widget = nullptr;
     void setWirelessFlow(WirelessFlow flow, const char *message = nullptr);
-    void beginCablePairing();
+    void beginCablePairing(bool forgetOnly = false);
+    void attemptCablePairing(bool resetExisting);
+    void beginLocalForget(const CablePairingInfo &pairing, bool continuePairing);
     void beginTargetScan(const CablePairingInfo &pairing);
     lv_obj_t *ui_LoadingOverlay = nullptr;
     lv_obj_t *ui_LoadingLabel = nullptr;

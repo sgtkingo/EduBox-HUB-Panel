@@ -16,6 +16,7 @@ const char* stateName(LinkState state) {
     case LinkState::Scanning: return "scanning";
     case LinkState::Connecting: return "connecting";
     case LinkState::Securing: return "securing";
+    case LinkState::Forgetting: return "forgetting";
     case LinkState::Ready: return "ready";
     case LinkState::Retry: return "retry";
     case LinkState::Error: return "error";
@@ -126,7 +127,7 @@ void Central::stop() {
 void Central::forget() {
   channel_.disconnect();
   std::lock_guard<std::mutex> lock(stateMutex_);
-  newRequest(); snapshot_.state = LinkState::Idle; command_ = Command::Forget;
+  newRequest(); snapshot_.state = LinkState::Forgetting; snapshot_.error[0] = 0; command_ = Command::Forget;
   log(LogLevel::Important, "forget request", "queued epoch=%lu", static_cast<unsigned long>(requestEpoch_.load()));
 }
 void Central::onPassKeyEntry(NimBLEConnInfo& info) {

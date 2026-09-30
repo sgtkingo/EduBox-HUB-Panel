@@ -9,7 +9,7 @@
 #include <string>
 
 namespace edubox { namespace ble {
-enum class LinkState : uint8_t { Off, Idle, Scanning, Connecting, Securing, Ready, Retry, Error };
+enum class LinkState : uint8_t { Off, Idle, Scanning, Connecting, Securing, Ready, Retry, Error, Forgetting };
 struct Peer { char address[18]{}; char name[40]{}; uint8_t type = 0; int rssi = 0; };
 struct Snapshot {
   LinkState state = LinkState::Off;

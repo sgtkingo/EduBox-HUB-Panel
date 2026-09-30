@@ -4,7 +4,7 @@
 #include <cstdint>
 
 // GUI-facing, hardware-independent link operations. No NimBLE or LVGL here.
-enum class ProtocolLinkState : uint8_t { Off, Idle, Scanning, Connecting, Securing, Ready, Retry, Error };
+enum class ProtocolLinkState : uint8_t { Off, Idle, Scanning, Connecting, Securing, Ready, Retry, Error, Forgetting };
 struct WirelessPeerInfo { char address[18]{}, name[40]{}; int rssi = 0; };
 enum class CablePairingStatus : uint8_t { Ok, AlreadyPaired, Error };
 struct CablePairingInfo {

@@ -168,8 +168,18 @@ bool Peripheral::forgetBond(uint32_t pairingWindowMs) {
     handle = handle_;
   }
   channel_.disconnect();
+  auto* advertising = NimBLEDevice::getAdvertising();
+  // ble_gap_unpair returns EBUSY while advertising or discovery is active.
+  if (!advertising->stop()) return false;
   if (server_ && handle != BLE_HS_CONN_HANDLE_NONE) server_->disconnect(handle);
-  if (!NimBLEDevice::deleteAllBonds() || !preferences_.clear()) return false;
+  if (!NimBLEDevice::deleteAllBonds()) {
+    advertising->start();
+    return false;
+  }
+  if (!preferences_.clear()) {
+    advertising->start();
+    return false;
+  }
   {
     std::lock_guard<std::mutex> lock(stateMutex_);
     handle_ = BLE_HS_CONN_HANDLE_NONE;
@@ -181,7 +191,6 @@ bool Peripheral::forgetBond(uint32_t pairingWindowMs) {
     pairingUntil_ = millis() + pairingWindowMs;
   }
   status_->setValue("EDUBOX-BLE/1;ready=0");
-  auto* advertising = NimBLEDevice::getAdvertising();
   return advertising->isAdvertising() || advertising->start();
 }
 }}

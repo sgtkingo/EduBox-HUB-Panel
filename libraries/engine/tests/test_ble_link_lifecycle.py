@@ -36,6 +36,14 @@ class BleLifecycleTest(unittest.TestCase):
             "bool DeviceManager::reconnectProtocolLink()", 1)[0]
         self.assertLess(end_session.index("protocolClient.bye(true)"), end_session.index("stopWireless()"))
         central = (ROOT.parent / "edubox-ble/src/ble_central.cpp").read_text(encoding="utf-8")
+        gui_manager = (ROOT / "src/gui/gui_manager.cpp").read_text(encoding="utf-8")
+        navigation = gui_manager.split("void GuiManager::navigateTo", 1)[1].split("void GuiManager::navigateBack", 1)[0]
+        self.assertIn("targetState == GuiState::COMMUNICATION_SELECTION", navigation)
+        self.assertIn("currentState == GuiState::SELECTION", navigation)
+        self.assertIn("deviceManager.endProtocolSession();", navigation)
+        peripheral = (ROOT.parent / "edubox-ble/src/ble_peripheral.cpp").read_text(encoding="utf-8")
+        forget = peripheral.split("bool Peripheral::forgetBond", 1)[1]
+        self.assertLess(forget.index("advertising->stop()"), forget.index("deleteAllBonds()"))
         self.assertIn("if (enabled_ && (disconnected ||", central)
 
 
@@ -54,8 +62,11 @@ class BleLifecycleTest(unittest.TestCase):
     def test_cable_commissioning_and_manual_settings_contract(self):
         gui = (ROOT / "src/gui/communication_selection_gui.cpp").read_text(encoding="utf-8")
         link = (ROOT.parents[1] / "ui/panel_protocol_link.hpp").read_text(encoding="utf-8")
-        self.assertIn("requestCablePairing(false)", gui)
-        self.assertIn("requestCablePairing(true)", gui)
+        self.assertIn("requestCablePairing(resetExisting)", gui)
+        self.assertIn("attemptCablePairing(forgetOnly); // First request is immediate", gui)
+        self.assertIn("beginCablePairing(true)", gui)
+        self.assertIn("WirelessFlow::LocalForgetting", gui)
+        self.assertIn("flow != WirelessFlow::LocalForgetting", gui)
         self.assertIn("lv_tick_elaps(wirelessFlowStarted) >= 5000", gui)
         self.assertIn("lv_tick_elaps(lastPairAttempt) >= 500", gui)
         self.assertIn("targetBoardId == info.peers[i].name", gui)

@@ -278,8 +278,10 @@ void CommunicationSelectionGui::setWirelessFlow(WirelessFlow flow, const char *m
     wirelessFlow = flow;
     const bool manual = flow == WirelessFlow::Manual;
     const bool working = flow == WirelessFlow::CablePairing ||
-        flow == WirelessFlow::TargetScanning || flow == WirelessFlow::Connecting;
-    const bool action = flow == WirelessFlow::AlreadyPaired || flow == WirelessFlow::Error;
+        flow == WirelessFlow::LocalForgetting || flow == WirelessFlow::TargetScanning ||
+        flow == WirelessFlow::Connecting;
+    const bool action = flow == WirelessFlow::AlreadyPaired ||
+        flow == WirelessFlow::Forgotten || flow == WirelessFlow::Error;
     auto show = [](lv_obj_t *object, bool visible) {
         if (!object) return;
         if (visible) lv_obj_clear_flag(object, LV_OBJ_FLAG_HIDDEN);
@@ -289,27 +291,79 @@ void CommunicationSelectionGui::setWirelessFlow(WirelessFlow flow, const char *m
     show(wirelessConnect, manual); show(wirelessScan, manual); show(wirelessForget, manual);
     show(wirelessInstruction, !manual); show(wirelessSpinner, working);
     show(wirelessAction, action); show(wirelessContinue, flow == WirelessFlow::Success);
-    if (message && wirelessInstruction) lv_label_set_text(wirelessInstruction, message);
+    show(wirelessBack, flow != WirelessFlow::LocalForgetting);
+    if (message) {
+        if (manual && wirelessStatus) lv_label_set_text(wirelessStatus, message);
+        else if (wirelessInstruction) lv_label_set_text(wirelessInstruction, message);
+    }
     if (wirelessAction) {
         auto *label = lv_obj_get_child(wirelessAction, 0);
-        lv_label_set_text(label, flow == WirelessFlow::AlreadyPaired ?
-            "Forget Board & replace pairing" : "Retry");
+        const char *text = flow == WirelessFlow::AlreadyPaired ? "Forget Board & replace pairing" :
+            flow == WirelessFlow::Forgotten ? "Back to BLE Settings" : "Retry";
+        lv_label_set_text(label, text);
     }
 }
 
-void CommunicationSelectionGui::beginCablePairing()
+void CommunicationSelectionGui::attemptCablePairing(bool resetExisting)
+{
+    auto *link = deviceManager.getProtocolLinkControl();
+    if (!link || wirelessFlow != WirelessFlow::CablePairing) return;
+    lastPairAttempt = lv_tick_get();
+    debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "BLE.GUI", "UART PAIR",
+        "sending reset=%d elapsedMs=%lu", resetExisting,
+        static_cast<unsigned long>(lv_tick_elaps(wirelessFlowStarted)));
+    const auto pairing = link->requestCablePairing(resetExisting);
+    if (pairing.status == CablePairingStatus::Ok) {
+        debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "BLE.GUI", "UART PAIR",
+            "accepted reset=%d boardId=%s", resetExisting, pairing.boardId);
+        if (resetExisting) beginLocalForget(pairing, !cableForgetOnly);
+        else beginTargetScan(pairing);
+        return;
+    }
+    if (pairing.status == CablePairingStatus::AlreadyPaired) {
+        setWirelessFlow(WirelessFlow::AlreadyPaired,
+            "This Board is already paired.\nReplace its existing pairing?");
+        return;
+    }
+    debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "BLE.GUI", "UART PAIR",
+        "failed reset=%d error=%s", resetExisting, pairing.error[0] ? pairing.error : "-");
+    if (pairing.error[0] && std::strcmp(pairing.error, "Response timeout") != 0) {
+        setWirelessFlow(WirelessFlow::Error, pairing.error);
+    }
+}
+
+void CommunicationSelectionGui::beginLocalForget(const CablePairingInfo &pairing, bool continuePairing)
+{
+    auto *link = deviceManager.getProtocolLinkControl();
+    targetBoardId = pairing.boardId;
+    targetPin = pairing.pin;
+    localForgetForPairing = continuePairing;
+    wirelessFlowStarted = lv_tick_get();
+    setWirelessFlow(WirelessFlow::LocalForgetting,
+        continuePairing ? "Board bond removed.\nRemoving the old pairing from Panel..." :
+                          "Board bond removed.\nRemoving the pairing from Panel...");
+    link->forgetWireless();
+}
+
+void CommunicationSelectionGui::beginCablePairing(bool forgetOnly)
 {
     auto *link = deviceManager.getProtocolLinkControl();
     if (!link) return;
     hideWirelessKeyboard();
     deviceManager.endProtocolSession();
     link->selectCable();
+    cableForgetOnly = forgetOnly;
+    localForgetForPairing = false;
     targetBoardId.clear(); targetPin = 0;
     wirelessFlowStarted = lv_tick_get();
-    lastPairAttempt = wirelessFlowStarted - 500;
+    lastPairAttempt = wirelessFlowStarted;
     setWirelessFlow(WirelessFlow::CablePairing,
-        "Connect the Board to the Panel with the UART cable.\n"
-        "Reading Board ID and PIN... (5 s)");
+        forgetOnly ? "Connect this Board to the Panel with the UART cable.\n"
+                     "Removing pairing from both devices... (5 s)" :
+                     "Connect the Board to the Panel with the UART cable.\n"
+                     "Reading Board ID and PIN... (5 s)");
+    lv_refr_now(nullptr);
+    attemptCablePairing(forgetOnly); // First request is immediate; timer only retries.
 }
 
 void CommunicationSelectionGui::beginTargetScan(const CablePairingInfo &pairing)
@@ -382,18 +436,37 @@ void CommunicationSelectionGui::showWireless(bool remembered)
         wirelessForget = addButton("Forget pairing", 12, 282, 220, 52, 0xC73535, [](lv_event_t *e) {
             auto *self = static_cast<CommunicationSelectionGui *>(lv_event_get_user_data(e));
             self->hideWirelessKeyboard(); self->wirelessPending = false;
-            self->deviceManager.getProtocolLinkControl()->forgetWireless();
             lv_textarea_set_text(self->wirelessPin, "");
+            self->beginCablePairing(true);
         });
         wirelessAction = addButton("Retry", 225, 268, 270, 50, 0xC73535, [](lv_event_t *e) {
             auto *self = static_cast<CommunicationSelectionGui *>(lv_event_get_user_data(e));
             auto *link = self->deviceManager.getProtocolLinkControl();
+            if (self->wirelessFlow == WirelessFlow::Forgotten) {
+                self->cableForgetOnly = false;
+                self->setWirelessFlow(WirelessFlow::Manual, "Pairing removed from Board and Panel.");
+                self->displayedPeerCount = static_cast<size_t>(-1);
+                link->scanWireless();
+                return;
+            }
             if (self->wirelessFlow == WirelessFlow::AlreadyPaired) {
+                self->cableForgetOnly = false;
+                self->wirelessFlowStarted = lv_tick_get();
                 self->setWirelessFlow(WirelessFlow::CablePairing, "Resetting existing Board pairing...");
-                const auto pairing = link->requestCablePairing(true);
-                if (pairing.status == CablePairingStatus::Ok) self->beginTargetScan(pairing);
-                else self->setWirelessFlow(WirelessFlow::Error,
-                    pairing.error[0] ? pairing.error : "Unable to reset Board pairing.");
+                self->attemptCablePairing(true);
+                return;
+            }
+            if (self->localForgetForPairing) {
+                CablePairingInfo pairing;
+                pairing.status = CablePairingStatus::Ok;
+                pairing.pin = self->targetPin;
+                std::snprintf(pairing.boardId, sizeof(pairing.boardId), "%s",
+                    self->targetBoardId.c_str());
+                self->beginLocalForget(pairing, true);
+                return;
+            }
+            if (self->cableForgetOnly) {
+                self->beginCablePairing(true);
                 return;
             }
             if (self->wirelessCompletionMode == DefaultCommunicationMode::WIRELESS_MANUAL) {
@@ -464,16 +537,30 @@ void CommunicationSelectionGui::refreshWireless()
     const auto info = link->info();
     if (wirelessFlow == WirelessFlow::CablePairing) {
         if (lv_tick_elaps(wirelessFlowStarted) >= 5000) {
-            setWirelessFlow(WirelessFlow::Error,
-                "No PAIR response in 5 seconds.\nCheck the UART cable and try again."); return;
+            setWirelessFlow(WirelessFlow::Error, cableForgetOnly ?
+                "Unable to remove pairing in 5 seconds.\nCheck the UART cable and retry." :
+                "No PAIR response in 5 seconds.\nCheck the UART cable and retry.");
+            return;
         }
-        if (lv_tick_elaps(lastPairAttempt) >= 500) {
-            lastPairAttempt = lv_tick_get();
-            const auto pairing = link->requestCablePairing(false);
-            if (pairing.status == CablePairingStatus::Ok) beginTargetScan(pairing);
-            else if (pairing.status == CablePairingStatus::AlreadyPaired)
-                setWirelessFlow(WirelessFlow::AlreadyPaired,
-                    "This Board is already paired.\nReplace its existing pairing?");
+        if (lv_tick_elaps(lastPairAttempt) >= 500) attemptCablePairing(cableForgetOnly);
+        return;
+    }
+    if (wirelessFlow == WirelessFlow::LocalForgetting) {
+        if (info.state == ProtocolLinkState::Error) {
+            setWirelessFlow(WirelessFlow::Error,
+                info.error[0] ? info.error : "Unable to remove pairing from Panel.");
+            return;
+        }
+        if (info.state != ProtocolLinkState::Idle || info.rememberedAddress[0]) return;
+        if (localForgetForPairing) {
+            CablePairingInfo pairing;
+            pairing.status = CablePairingStatus::Ok;
+            pairing.pin = targetPin;
+            std::snprintf(pairing.boardId, sizeof(pairing.boardId), "%s", targetBoardId.c_str());
+            beginTargetScan(pairing);
+        } else {
+            setWirelessFlow(WirelessFlow::Forgotten,
+                "Pairing removed from Board and Panel.\nYou can now pair either device again.");
         }
         return;
     }
@@ -498,7 +585,7 @@ void CommunicationSelectionGui::refreshWireless()
     }
     if (wirelessFlow == WirelessFlow::Manual) {
         const char *states[] = {"Off", "Ready to scan", "Scanning...", "Connecting...",
-            "Securing...", "Connected", "Retrying...", "Error"};
+            "Securing...", "Connected", "Retrying...", "Error", "Forgetting..."};
         lv_label_set_text_fmt(wirelessStatus, "%s   %s",
             states[static_cast<unsigned>(info.state)], info.error);
         if (info.state != ProtocolLinkState::Scanning && displayedPeerCount != info.count) {

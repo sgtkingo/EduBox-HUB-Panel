@@ -39,7 +39,12 @@ public:
     }
     CablePairingInfo requestCablePairing(bool resetExisting = false) override {
         if (wireless_) selectCable();
+        debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "BLE.PanelLink", "UART PAIR",
+            "sending reset=%d wirelessSelected=%d", resetExisting, wireless_);
         const auto response = client_.pair(resetExisting);
+        debugLogMessage(response.status == vscp::Status::Ok ? DEBUG_VERBOSE_IMPORTANT : DEBUG_VERBOSE_ERRORS,
+            "BLE.PanelLink", "UART PAIR", "result status=%u error=%s",
+            static_cast<unsigned>(response.status), response.error.c_str());
         CablePairingInfo result;
         if (response.status != vscp::Status::Ok) {
             result.status = response.error == "already_paired"

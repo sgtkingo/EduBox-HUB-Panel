@@ -260,7 +260,9 @@ void GuiManager::navigateTo(GuiState targetState)
     debugLogMessage("GuiManager::navigateTo", "gui navigation", "from=%d to=%d", static_cast<int>(currentState), static_cast<int>(targetState));
     connectionFeedback.hideDisconnect();
     applyRuntimePolicy(targetState);
-    if (targetState == GuiState::MAIN_MENU) {
+    const bool returningToCommunication = targetState == GuiState::COMMUNICATION_SELECTION &&
+        currentState == GuiState::SELECTION;
+    if (targetState == GuiState::MAIN_MENU || returningToCommunication) {
         deviceManager.endProtocolSession();
     }
     renderState(targetState);
