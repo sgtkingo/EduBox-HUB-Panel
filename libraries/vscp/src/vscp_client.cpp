@@ -4,28 +4,43 @@
  */
 
 #include "vscp_client.hpp"
+#include <cstdio>
 
 namespace vscp {
 
 Client::Client(Transport& transport, unsigned long timeoutMs)
     : transport_(transport), timeoutMs_(timeoutMs) {}
 
-ResponseStatus Client::transact(Command command, Parameters parameters, bool requiresInit, const String& expectedId) {
+String Client::nextSequence() {
+  if (++sequence_ == 0) ++sequence_;
+  char buffer[11];
+  std::snprintf(buffer, sizeof(buffer), "%lu", static_cast<unsigned long>(sequence_));
+  return String(buffer);
+}
+
+ResponseStatus Client::transact(Command command, Parameters parameters, unsigned long timeoutOverrideMs,
+                                bool forceSequence) {
   ResponseStatus result;
   if (transacting_) { result.error = "Transaction already pending"; return result; }
   transacting_ = true;
   struct Guard { bool& busy; ~Guard() { busy = false; } } guard{transacting_};
-  if (requiresInit && !initialized_) {
-    result.error = "Protocol not initialized";
-    return result;
-  }
+  if (!transport_.isAvailable()) { closeSession(); result.error = "Peer disconnected"; return result; }
+  const auto expectedIdEntry = parameters.find("id");
+  const String expectedId = expectedIdEntry == parameters.end() ? String() : expectedIdEntry->second;
 
+  String expectedSequence;
+  if (sequenceEnabled_ || forceSequence) {
+    expectedSequence = nextSequence();
+    parameters["seq"] = expectedSequence;
+  }
   if (!transport_.writeLine(Codec::buildRequest(command, parameters))) {
     result.error = "Request write failed";
     return result;
   }
+  const unsigned long transactionTimeoutMs = timeoutOverrideMs ? timeoutOverrideMs : timeoutMs_;
   const unsigned long startedAt = detail::monotonicMilliseconds();
-  while (detail::monotonicMilliseconds() - startedAt < timeoutMs_) {
+  while (detail::monotonicMilliseconds() - startedAt < transactionTimeoutMs) {
+    if (!transport_.isAvailable()) { closeSession(); result.error = "Peer disconnected"; return result; }
     String message;
     const ReadStatus readStatus = transport_.readLine(message);
     if (readStatus == ReadStatus::NoData) {
@@ -45,6 +60,13 @@ ResponseStatus Client::transact(Command command, Parameters parameters, bool req
       result.error = parseError;
       return result;
     }
+    if (sequenceEnabled_ || forceSequence) {
+      const auto seq = result.parameters.find("seq");
+      if (seq == result.parameters.end() || seq->second != expectedSequence) {
+        result = ResponseStatus(); // Late/unsequenced response is not this transaction.
+        continue;
+      }
+    }
     if (detail::stringLength(expectedId) > 0) {
       const auto responseId = result.parameters.find("id");
       if (responseId == result.parameters.end() || responseId->second != expectedId) {
@@ -59,28 +81,37 @@ ResponseStatus Client::transact(Command command, Parameters parameters, bool req
   return result;
 }
 
+void Client::closeSession() {
+  initialized_ = false;
+  closed_ = true;
+  ping_.cancel();
+}
+
 bool Client::consumeBye(const String& message) {
   Request request;
   String error;
-  if (!Codec::parseRequest(message, request, error) || request.command != Command::Bye ||
-      request.value("side") != "server" || request.has("status")) return false;
+  if (!Codec::parseRequest(message, request, error) || request.command != Command::Bye || request.has("status")) return false;
   initialized_ = false;
   closed_ = true;
   ping_.cancel();
   return true;
 }
 
-bool Client::bye() {
+bool Client::bye(bool waitForResponse, unsigned long responseTimeoutMs) {
   if (transacting_) return false;
-  if (!transport_.writeLine(Codec::buildRequest(Command::Bye, {{"side", "client"}}))) return false;
-  initialized_ = false;
-  closed_ = true;
-  ping_.cancel();
-  return true;
+  if (!waitForResponse) {
+    if (!transport_.writeLine(Codec::buildRequest(Command::Bye, {}))) return false;
+    closeSession();
+    return true;
+  }
+  const auto response = transact(Command::Bye, {}, responseTimeoutMs);
+  closeSession();
+  return response.status == Status::Ok;
 }
 
 void Client::poll() {
   if (transacting_) return;
+  if (!transport_.isAvailable()) { closeSession(); return; }
   ping_.expire();
   String message;
   if (transport_.readLine(message) == ReadStatus::Message && !consumeBye(message))
@@ -92,11 +123,12 @@ ResponseStatus Client::ping() {
   if (transacting_) { response.error = "Transaction already pending"; return response; }
   transacting_ = true;
   struct Guard { bool& busy; ~Guard() { busy = false; } } guard{transacting_};
-  if (!ping_.start(transport_, timeoutMs_)) {
+  if (!ping_.start(transport_, timeoutMs_, nextSequence())) {
     response.error = "PING write failed";
     return response;
   }
   while (ping_.result().state == PingState::Pending) {
+    if (!transport_.isAvailable()) { closeSession(); response.error = "Peer disconnected"; return response; }
     String message;
     const ReadStatus status = transport_.readLine(message);
     if (status == ReadStatus::Message) {
@@ -109,7 +141,7 @@ ResponseStatus Client::ping() {
   const PingResult result = ping_.result();
   if (result.state == PingState::Ok) {
     response.status = Status::Ok;
-    response.parameters = {{"side", "server"}, {"seq", result.sequence}, {"status", "1"}};
+    response.parameters = {{"seq", result.sequence}, {"status", "1"}};
   } else response.error = "Response timeout";
   return response;
 }
@@ -119,7 +151,7 @@ ResponseStatus Client::init(const String& application, const String& databaseVer
   parameters["api"] = API_VERSION;
   if (detail::stringLength(application) > 0) parameters["app"] = application;
   if (detail::stringLength(databaseVersion) > 0) parameters["db"] = databaseVersion;
-  ResponseStatus response = transact(Command::Init, parameters, false);
+  ResponseStatus response = transact(Command::Init, parameters);
   initialized_ = response.status == Status::Ok;
   if (initialized_) closed_ = false;
   return response;
@@ -127,31 +159,37 @@ ResponseStatus Client::init(const String& application, const String& databaseVer
 
 ResponseStatus Client::connect(const String& uid, const String& pins) {
   Parameters parameters{{"id", uid}, {"pins", pins}};
-  return transact(Command::Connect, parameters, true, uid);
+  return transact(Command::Connect, parameters);
 }
 
 ResponseStatus Client::disconnect(const String& uid) {
-  return transact(Command::Disconnect, Parameters{{"id", uid}}, true, uid);
+  return transact(Command::Disconnect, Parameters{{"id", uid}});
 }
 
 ResponseStatus Client::update(const String& uid) {
-  return transact(Command::Update, Parameters{{"id", uid}}, true, uid);
+  return transact(Command::Update, Parameters{{"id", uid}});
 }
 
 ResponseStatus Client::config(const String& uid, const Parameters& parameters) {
   Parameters requestParameters = parameters;
   requestParameters["id"] = uid;
-  return transact(Command::Config, requestParameters, true, uid);
+  return transact(Command::Config, requestParameters);
 }
 
 ResponseStatus Client::control(const String& uid, const Parameters& parameters) {
   Parameters requestParameters = parameters;
   requestParameters["id"] = uid;
-  return transact(Command::Control, requestParameters, true, uid);
+  return transact(Command::Control, requestParameters);
 }
 
 ResponseStatus Client::reset(const String& uid) {
-  return transact(Command::Reset, Parameters{{"id", uid}}, true, uid);
+  return transact(Command::Reset, Parameters{{"id", uid}});
+}
+
+ResponseStatus Client::pair(bool resetExisting) {
+  Parameters parameters;
+  if (resetExisting) parameters["reset"] = "1";
+  return transact(Command::Pair, parameters, DEFAULT_TIMEOUT_MS, true);
 }
 
 }  // namespace vscp

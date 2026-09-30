@@ -36,14 +36,14 @@
 // Debug verbosity:
 // 0 = disabled, 1 = errors only, 2 = warnings and important operations, 3 = all debug details.
 #ifndef DEBUG_VERBOSE_LEVEL
-#define DEBUG_VERBOSE_LEVEL 0
+#define DEBUG_VERBOSE_LEVEL 3
 #endif
 
 // Application-owned UART wiring for the injected VSCP transport.
 // 1 = automatic link PING after INIT (also in Pause and on other screens).
 // 0 = disable automatic PING and its timer; runtime request safeguards remain.
 #ifndef ALLOW_PING_INTERRUPT
-#define ALLOW_PING_INTERRUPT 1
+#define ALLOW_PING_INTERRUPT 0
 #endif
 
 #ifndef EDUBOX_HUB_PANEL_VSCP_UART_PORT
@@ -55,11 +55,11 @@
 #endif
 
 #ifndef EDUBOX_HUB_PANEL_VSCP_UART_RX
-#define EDUBOX_HUB_PANEL_VSCP_UART_RX -1
+#define EDUBOX_HUB_PANEL_VSCP_UART_RX -1 //J10, 1
 #endif
 
 #ifndef EDUBOX_HUB_PANEL_VSCP_UART_TX
-#define EDUBOX_HUB_PANEL_VSCP_UART_TX -1
+#define EDUBOX_HUB_PANEL_VSCP_UART_TX -1 //J10, 2
 #endif
 
 #ifndef CASE_SENSITIVE

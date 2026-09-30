@@ -18,9 +18,16 @@ public:
   // Call poll regularly while idle to answer server-initiated PING.
   void poll();
   ResponseStatus ping();
-  // One-way session close notification. No response is expected.
-  bool bye();
+  // Every client BYE receives status=1. The caller chooses whether to wait for
+  // that response before closing locally.
+  bool bye(bool waitForResponse = false, unsigned long responseTimeoutMs = BYE_RESPONSE_TIMEOUT_MS);
   bool sessionClosed() const { return closed_; }
+  // Physical link loss: no write/BYE, cancel pending protocol state locally.
+  void closeSession();
+  // Opt-in API 1.6 revision: require matching echoed seq on ordinary responses.
+  // Enable before INIT only against a server that supports seq echo.
+  void setSequenceEnabled(bool enabled) { sequenceEnabled_ = enabled; }
+  void setTimeout(unsigned long timeoutMs) { timeoutMs_ = timeoutMs; }
 
   ResponseStatus init(const String& application = "", const String& databaseVersion = "");
   ResponseStatus connect(const String& uid, const String& pins);
@@ -30,18 +37,25 @@ public:
   ResponseStatus control(const String& uid, const Parameters& parameters);
   ResponseStatus reset(const String& uid);
 
+  // Physical UART commissioning; valid before INIT and always sequenced.
+  ResponseStatus pair(bool resetExisting = false);
+
   bool isInitialized() const { return initialized_; }
   const char* apiVersion() const { return API_VERSION; }
 
 private:
   bool consumeBye(const String& message);
-  ResponseStatus transact(Command command, Parameters parameters, bool requiresInit, const String& expectedId = "");
+  String nextSequence();
+  ResponseStatus transact(Command command, Parameters parameters, unsigned long timeoutOverrideMs = 0,
+                          bool forceSequence = false);
 
   Transport& transport_;
   unsigned long timeoutMs_;
   bool initialized_ = false;
   bool closed_ = false;
   bool transacting_ = false;
+  bool sequenceEnabled_ = false;
+  uint32_t sequence_ = 0;
   detail::PingExchange ping_{false};
 };
 

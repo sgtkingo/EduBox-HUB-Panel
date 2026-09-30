@@ -1,6 +1,6 @@
 # VSCP client/server library
 
-The library implements **Virtual Sensors Communication Protocol** API `1.6`. Library version: `2.2.2`.
+The library implements **Virtual Sensors Communication Protocol** API `1.7`. Library version: `2.3.0`.
 It is not the event-based Very Simple Control Protocol.
 
 ## Components
@@ -80,8 +80,8 @@ these diagnostic lines: if it treats them as protocol requests, its extra error
 responses can interfere with INIT or cause a missing response UID. For hardware
 with a separate native USB connection, `CDCOnBoot=cdc` moves Serial logging to
 that USB console and keeps diagnostics off the protocol UART0.
-Response parameter order is irrelevant: `?api=1.6&status=1` and
-`?status=1&api=1.6` both parse successfully.
+Response parameter order is irrelevant: `?api=1.7&status=1` and
+`?status=1&api=1.7` both parse successfully.
 
 Before dispatch, the common transport removes bytes outside printable ASCII
 (`32..126`) and trims surrounding whitespace on both RX and TX. The Arduino
@@ -91,21 +91,23 @@ matching the framing behavior of the original UART messenger.
 ## Bidirectional PING
 
 PING checks peer communication without INIT, device handlers, or pin changes.
-Client is always `side=client`; each Server endpoint is `side=server`.
+Either endpoint may initiate, including simultaneously.
 
 ```text
-?type=PING&side=client&seq=42
-?side=server&seq=42&status=1
+?type=PING&seq=42
+?seq=42&status=1
 ```
 
-Either side may initiate, including simultaneously. Requests contain `type=PING`; acknowledgements contain `side`, `seq` and
-`status` without `type`. These fields route acknowledgements separately; acknowledgements are never answered. `seq` is a
-canonical decimal integer from 1 to 4294967295. Each endpoint generates its own
-sequence, advancing for every attempt and wrapping to 1. Only `status=1` from
-the opposite side with the pending sequence is accepted before the deadline.
-Invalid PING fields, unsolicited, duplicate and late replies are ignored.
-Parameter order is immaterial; existing commands retain their wire format.
-Sequence matching applies within an endpoint lifetime, not across restarts.
+Requests contain `type=PING` and no `status`; responses contain `status` and
+no command. Responses are never answered. `seq` is a canonical decimal integer
+from 1 to 4294967295. Each endpoint generates its own outgoing sequence,
+advancing for every attempt and wrapping to 1. The client shares this counter
+between PING and sequenced ordinary requests, preventing a late ordinary
+response from acknowledging a newer PING. Only `status=1` with the pending
+sequence is accepted before the deadline. Invalid PING fields, unsolicited,
+duplicate and late replies are ignored. Parameter order is immaterial; existing
+commands retain their wire format. Sequence matching applies within an endpoint
+lifetime, not across restarts.
 
 ```cpp
 // Client: synchronous, uses the constructor's timeout, does not initialize.
@@ -145,19 +147,31 @@ python libraries/vscp/tests/run_tests.py
 ## BYE session notification
 
 ```text
-?type=BYE&side=client
+?type=BYE
+?type=BYE&seq=42
 ```
 
-The server may likewise send `side=server`. BYE has no reply, status or sequence.
-It works before INIT, closes only this transport's protocol session and cancels
-its PING. Hardware connections/pins and the physical transport are unchanged.
-Further normal requests need a new INIT; PING still works. Receiving BYE while
-waiting for a response immediately returns `Peer disconnected`.
+Either endpoint may send BYE. Every client-to-server BYE receives `status=1`;
+when `seq` is present, the response echoes it. Server-to-client BYE remains
+one-way. BYE works before INIT, closes only this transport's protocol session
+and cancels its PING. Hardware connections/pins and the physical transport are
+unchanged. Further normal requests need a new INIT; PING still works. Receiving
+BYE while waiting for a response immediately returns `Peer disconnected`.
 
-Use `client.bye()` or `server.bye(transport)` to send. The boolean result means
-write success, not confirmed delivery; failed writes leave local state intact.
+Use `client.bye()` to send without waiting, or `client.bye(true)` to wait for
+the response before closing locally. `server.bye(transport)` sends the one-way
+server notification. Failed non-waiting writes leave local state intact.
 Use `client.sessionClosed()` to observe closure, or `server.onBye(handler)` to
 observe a remote BYE with the affected `Transport&`. The callback fires once
 per closed session and is rearmed by successful INIT. These methods share the
 same single-owner execution requirements as poll and other transactions.
-Wrong-role and status-bearing BYE messages do not close a session.
+Status-bearing BYE messages do not close a session.
+
+## Physical commissioning with PAIR
+
+`Client::pair(resetExisting)` sends `PAIR` before INIT and always includes a
+transaction `seq`. A successful application handler returns `board_id` and a
+six-digit `pin`. The server deliberately allows PAIR before INIT; applications
+must restrict it to an authorized physical transport. EduBox Board accepts it
+only on UART2. Existing pairing is reported as `already_paired`; replacement
+requires `reset=1`. The shared protocol library does not derive identities or PINs.

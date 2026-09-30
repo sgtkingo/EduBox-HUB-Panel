@@ -11,13 +11,16 @@
 #include <vscp.hpp>
 #include <engine.hpp>  // include engine header
 #include "vscp_panel_log_sink.hpp"
+#include "panel_ble_log_sink.hpp"
+#include "panel_protocol_link.hpp"
+#include <esp_heap_caps.h>
 #include <esp_timer.h>
 #include <atomic>
 
 /*Don't forget to set Sketchbook location in File/Preferences to the path of your UI project (the parent foder of this INO file)*/
 
 
-enum BoardConstants { TFT_BL=2, LVGL_BUFFER_RATIO=6 };
+enum BoardConstants { TFT_BL=2, LVGL_BUFFER_LINES=10 };
 static constexpr const char *DEVICE_DB_STORAGE_PATH = STORAGE_DEFAULT_DEVICE_DB_PATH;
 
 
@@ -96,7 +99,29 @@ static const uint16_t screenWidth  = 800;
 static const uint16_t screenHeight = 480;
 
 static lv_disp_draw_buf_t draw_buf;
-static lv_color_t buf [screenWidth * screenHeight / LVGL_BUFFER_RATIO];
+static constexpr size_t lvglBufferPixels = screenWidth * LVGL_BUFFER_LINES;
+static lv_color_t *drawBufferA = nullptr;
+static lv_color_t *drawBufferB = nullptr;
+
+static bool allocateLvglDrawBuffer()
+{
+    // The RGB panel continuously scans its full framebuffer from PSRAM. Keep
+    // LVGL's short render buffers in internal RAM so rendering does not read
+    // and write PSRAM at the same time as the display DMA.
+    const uint32_t caps = MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT;
+    const size_t bufferBytes = sizeof(lv_color_t) * lvglBufferPixels;
+    drawBufferA = static_cast<lv_color_t *>(heap_caps_malloc(bufferBytes, caps));
+    drawBufferB = static_cast<lv_color_t *>(heap_caps_malloc(bufferBytes, caps));
+    if (drawBufferA && drawBufferB) {
+        return true;
+    }
+
+    heap_caps_free(drawBufferA);
+    heap_caps_free(drawBufferB);
+    drawBufferA = nullptr;
+    drawBufferB = nullptr;
+    return false;
+}
 
 
 #include "touch.h"
@@ -155,7 +180,13 @@ DeviceBrowserState deviceBrowserState(deviceCatalog); // Shared browse/highlight
 HardwareSerial vscpSerial(EDUBOX_HUB_PANEL_VSCP_UART_PORT); // Physical UART owned and configured by the application
 PanelVscpLogSink vscpLogSink;
 vscp::StreamTransport vscpTransport(vscpSerial, vscp::MAX_MESSAGE_SIZE, &vscpLogSink); // Transport only frames lines; it does not own the UART
-vscp::Client vscpClient(vscpTransport); // Shared VSCP protocol client
+edubox::ble::Channel bleChannel;
+edubox::ble::Transport bleTransport(bleChannel);
+PanelBleLogSink bleLogSink;
+edubox::ble::Central bleBridge(bleChannel, &bleLogSink);
+SelectedProtocolTransport selectedTransport(vscpTransport);
+vscp::Client vscpClient(selectedTransport); // One protocol owner, selected physical link
+PanelProtocolLink protocolLink(vscpClient, vscpTransport, selectedTransport, bleChannel, bleTransport, bleBridge);
 DeviceManager deviceManager(deviceCatalog, vscpClient);  // Runtime device manager over the shared catalog
 DeviceVisualizationSession deviceVisualizationSession; // Active visualization session over selected runtime devices
 DataBundleManager dataBundleManager; // Create DataBundleManager instance
@@ -191,6 +222,8 @@ void setup ()
         SERIAL_8N1,
         EDUBOX_HUB_PANEL_VSCP_UART_RX,
         EDUBOX_HUB_PANEL_VSCP_UART_TX);
+    deviceManager.setProtocolLinkControl(protocolLink);
+    bleBridge.begin();
 
     //Init Display
     lcd.begin();
@@ -208,7 +241,11 @@ void setup ()
 
     //screenWidth = lcd.width();
     //screenHeight = lcd.height();
-    lv_disp_draw_buf_init( &draw_buf, buf, NULL, screenWidth * screenHeight / LVGL_BUFFER_RATIO );
+    if (!allocateLvglDrawBuffer()) {
+        debugLogMessage(DEBUG_VERBOSE_ERRORS, "setup", "display", "LVGL draw buffer allocation failed");
+        return;
+    }
+    lv_disp_draw_buf_init( &draw_buf, drawBufferA, drawBufferB, lvglBufferPixels );
 
     /*Initialize the display*/
     static lv_disp_drv_t disp_drv;
@@ -261,7 +298,9 @@ void setup ()
 
 void loop ()
 {
-    vscpClient.poll();
+    if (protocolLink.service()) deviceManager.notifyProtocolTransportDisconnected();
+    deviceManager.serviceProtocolSafety();
+    if (deviceManager.shouldPollProtocol()) vscpClient.poll();
 #if ALLOW_PING_INTERRUPT
     if (!linkWatchdogTimerReady || linkWatchdogDue.exchange(false, std::memory_order_acquire)) {
         // During online Run, UPDATE/CONFIG/CONTROL own the link watchdog.

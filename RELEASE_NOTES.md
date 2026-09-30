@@ -1,5 +1,15 @@
 # RELEASE_NOTES
 
+## Minor release – Bluetooth bridge and VSCP 1.7
+
+* Added the secured Bluetooth bridge between Panel and Board, including
+  pairing, connection management and bounded message framing.
+* Improved recovery after connection loss, cancelled discovery and unpairing.
+  Lost sessions stop watchdog replies and require a new connection and INIT.
+* Aligned the bundled VSCP library and both emulators with API 1.7 and library
+  version 2.3.0. Updated protocol examples and regression inputs.
+* Updated the Bluetooth settings screen and bridge validation workflow.
+
 ## 1.2.0.76 - Shared VSCP client/server update
 
 ### Protocol architecture

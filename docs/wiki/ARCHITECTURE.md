@@ -133,7 +133,7 @@ sequenceDiagram
 
     UI->>DM: initialize cable communication
     DM->>P: INIT
-    P->>HW: ?type=INIT&app=board&db=1.3&api=1.3
+    P->>HW: ?type=INIT&app=board&db=1.3&api=1.7
     HW-->>P: ?status=1
 
     UI->>DM: connect selected pins

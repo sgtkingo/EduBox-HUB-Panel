@@ -12,11 +12,27 @@ void Server::addTransport(Transport& transport) {
 }
 
 void Server::on(Command command, Handler handler) {
+  handlers_[command] = [handler](const Request& request, Transport&) { return handler(request); };
+}
+
+void Server::on(Command command, ContextHandler handler) {
   handlers_[command] = std::move(handler);
 }
 
+bool Server::closeSession(Transport& transport) {
+  for (auto& endpoint : endpoints_) {
+    if (endpoint.transport != &transport) continue;
+    endpoint.initialized = false;
+    endpoint.closed = true;
+    endpoint.ping.cancel();
+    return true;
+  }
+  return false;
+}
+
 Response Server::dispatch(Endpoint& endpoint, const Request& request) {
-  if (request.command != Command::Init && !endpoint.initialized) {
+  // PAIR is physical commissioning and must work before a protocol session.
+  if (request.command != Command::Init && request.command != Command::Pair && !endpoint.initialized) {
     return Response::fail("Protocol not initialized");
   }
 
@@ -25,7 +41,7 @@ Response Server::dispatch(Endpoint& endpoint, const Request& request) {
     return Response::fail("Unknown type");
   }
 
-  Response response = handler->second(request);
+  Response response = handler->second(request, *endpoint.transport);
   if (request.command == Command::Init) {
     endpoint.initialized = response.status == Status::Ok;
     if (endpoint.initialized) endpoint.closed = false;
@@ -43,20 +59,25 @@ void Server::process(Endpoint& endpoint, const String& message) {
   }
 
   if (request.command == Command::Bye) {
-    if (request.value("side") == "client" && !request.has("status")) {
+    if (!request.has("status")) {
       const bool notify = !endpoint.closed;
       endpoint.initialized = false;
       endpoint.closed = true;
       endpoint.ping.cancel();
       if (notify && byeHandler_) byeHandler_(*endpoint.transport);
+      Response response = Response::ok();
+      if (request.has("seq")) response.parameters["seq"] = request.value("seq");
+      endpoint.transport->writeLine(Codec::buildResponse(response));
     }
-    return; // BYE is a notification, including before INIT. Never acknowledge it.
+    return; // Every valid client BYE receives status=1 after local cleanup.
   }
 
   const bool wasClosed = endpoint.closed;
   Response response = dispatch(endpoint, request);
   if (!wasClosed && endpoint.closed) return; // Handler sent BYE instead of an ordinary response.
   const String requestId = request.value("id");
+  // Optional ordinary transaction correlation; no change for legacy requests.
+  if (request.has("seq")) response.parameters["seq"] = request.value("seq");
   if (requestId.length() > 0 && response.parameters.find("id") == response.parameters.end()) {
     response.parameters["id"] = requestId;
   }
@@ -66,7 +87,7 @@ void Server::process(Endpoint& endpoint, const String& message) {
 bool Server::bye(Transport& transport) {
   for (auto& endpoint : endpoints_) {
     if (endpoint.transport != &transport) continue;
-    if (!transport.writeLine(Codec::buildRequest(Command::Bye, {{"side", "server"}}))) return false;
+    if (!transport.writeLine(Codec::buildRequest(Command::Bye, {}))) return false;
     endpoint.initialized = false;
     endpoint.closed = true;
     endpoint.ping.cancel();

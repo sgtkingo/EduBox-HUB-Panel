@@ -1,0 +1,109 @@
+#pragma once
+#include <protocol_link_control.hpp>
+#include <selected_protocol_transport.hpp>
+#include <edubox_ble.hpp>
+#include <expt.hpp>
+#include <cstdio>
+
+// Physical composition only. VSCP/DeviceManager and GUI depend on the interface.
+class PanelProtocolLink : public ProtocolLinkControl {
+    vscp::Client& client_;
+    vscp::StreamTransport& uart_;
+    SelectedProtocolTransport& selected_;
+    edubox::ble::Channel& channel_;
+    edubox::ble::Transport& transport_;
+    edubox::ble::Central& central_;
+    bool wireless_ = false;
+    void selectWireless() {
+        const bool changed = !wireless_;
+        client_.closeSession();
+        wireless_ = true;
+        selected_.select(transport_);
+        client_.setSequenceEnabled(true); client_.setTimeout(10000);
+        debugLogMessage(changed ? DEBUG_VERBOSE_IMPORTANT : DEBUG_VERBOSE_ALL,
+            "BLE.PanelLink", "transport selection",
+            "wireless selected changed=%d sequence=1 timeoutMs=10000", changed);
+    }
+public:
+    PanelProtocolLink(vscp::Client& client, vscp::StreamTransport& uart, SelectedProtocolTransport& selected,
+                      edubox::ble::Channel& channel, edubox::ble::Transport& transport, edubox::ble::Central& central)
+        : client_(client), uart_(uart), selected_(selected), channel_(channel), transport_(transport), central_(central) {}
+    void selectCable() override {
+        const bool changed = wireless_;
+        client_.closeSession(); wireless_ = false;
+        central_.stop(); uart_.clearInput(); selected_.select(uart_);
+        client_.setSequenceEnabled(false); client_.setTimeout(vscp::DEFAULT_TIMEOUT_MS);
+        debugLogMessage(changed ? DEBUG_VERBOSE_IMPORTANT : DEBUG_VERBOSE_ALL,
+            "BLE.PanelLink", "transport selection", "cable selected changed=%d sequence=0 timeoutMs=%lu",
+            changed, static_cast<unsigned long>(vscp::DEFAULT_TIMEOUT_MS));
+    }
+    CablePairingInfo requestCablePairing(bool resetExisting = false) override {
+        if (wireless_) selectCable();
+        debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "BLE.PanelLink", "UART PAIR",
+            "sending reset=%d wirelessSelected=%d", resetExisting, wireless_);
+        const auto response = client_.pair(resetExisting);
+        debugLogMessage(response.status == vscp::Status::Ok ? DEBUG_VERBOSE_IMPORTANT : DEBUG_VERBOSE_ERRORS,
+            "BLE.PanelLink", "UART PAIR", "result status=%u error=%s",
+            static_cast<unsigned>(response.status), response.error.c_str());
+        CablePairingInfo result;
+        if (response.status != vscp::Status::Ok) {
+            result.status = response.error == "already_paired"
+                ? CablePairingStatus::AlreadyPaired : CablePairingStatus::Error;
+            std::snprintf(result.error, sizeof(result.error), "%s", response.error.c_str());
+            return result;
+        }
+        const auto board = response.parameters.find("board_id");
+        const auto pin = response.parameters.find("pin");
+        if (board == response.parameters.end() || board->second.length() == 0 ||
+            pin == response.parameters.end() || pin->second.length() != 6) {
+            std::snprintf(result.error, sizeof(result.error), "%s", "Invalid PAIR response");
+            return result;
+        }
+        uint32_t pinValue = 0;
+        for (size_t i = 0; i < 6; ++i) {
+            const char digit = pin->second[i];
+            if (digit < '0' || digit > '9') {
+                std::snprintf(result.error, sizeof(result.error), "%s", "Invalid PAIR PIN");
+                return result;
+            }
+            pinValue = pinValue * 10 + uint32_t(digit - '0');
+        }
+        result.status = CablePairingStatus::Ok;
+        result.pin = pinValue;
+        std::snprintf(result.boardId, sizeof(result.boardId), "%s", board->second.c_str());
+        return result;
+    }
+    void scanWireless() override { selectWireless(); central_.scan(); }
+    bool connectWireless(size_t index, uint32_t pin) override { selectWireless(); return central_.select(index, pin); }
+    bool connectRemembered() override { selectWireless(); return central_.connectSaved(); }
+    void stopWireless() override { central_.stop(); }
+    void forgetWireless() override { client_.closeSession(); central_.forget(); }
+    bool wirelessSelected() const override { return wireless_; }
+    bool service() {
+        // Latch physical loss once, before Client::poll / any GUI exchange.
+        if (!channel_.takeLoss()) return false;
+        if (!wireless_) {
+            debugLogMessage(DEBUG_VERBOSE_ALL, "BLE.PanelLink", "physical loss",
+                "BLE channel loss ignored because cable transport is selected");
+            return false;
+        }
+        debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "BLE.PanelLink", "physical loss",
+            "BLE channel loss consumed; closing VSCP session");
+        client_.closeSession(); return true;
+    }
+    ProtocolLinkInfo info() const override {
+        const auto source = central_.snapshot();
+        ProtocolLinkInfo result;
+        result.state = static_cast<ProtocolLinkState>(source.state);
+        result.count = source.count; result.mtu = source.mtu;
+        std::snprintf(result.rememberedAddress, sizeof(result.rememberedAddress), "%s", source.savedAddress);
+        std::snprintf(result.rememberedBoardId, sizeof(result.rememberedBoardId), "%s", source.savedBoardId);
+        std::snprintf(result.error, sizeof(result.error), "%s", source.error);
+        for (size_t i = 0; i < result.count; ++i) {
+            std::snprintf(result.peers[i].address, sizeof(result.peers[i].address), "%s", source.peers[i].address);
+            std::snprintf(result.peers[i].name, sizeof(result.peers[i].name), "%s", source.peers[i].name);
+            result.peers[i].rssi = source.peers[i].rssi;
+        }
+        return result;
+    }
+};

@@ -21,6 +21,7 @@
 #include "../devices/base_device.hpp"
 #include "device_catalog.hpp"
 #include "pin_structure.hpp"
+#include "../protocol_link_control.hpp"
 
 /**
  * @enum ManagerStatus
@@ -51,10 +52,12 @@ class DeviceManager {
 private:
     DeviceCatalog &catalog;                        ///< Shared device catalog loaded during boot.
     RuntimeProtocolSession protocolClient;         ///< Panel session policy over the injected shared VSCP client.
+    ProtocolLinkControl* linkControl = nullptr;
     std::array<VirtualPin, NUM_PINS> PinMap;     ///< Mapping of pins to devices.
 
     bool initialized = false;                 ///< Initialization state flag
     ManagerStatus Status = ManagerStatus::STOPPED; ///< Current status of the manager
+    std::string lastError;                    ///< User-facing detail from the latest failed operation.
 
     std::vector<BaseDevice *> collectAssignedDevicesFromPinMap() const;
     std::vector<BaseDevice *> filterCompleteDevices(const std::vector<BaseDevice *> &devices) const;
@@ -97,10 +100,16 @@ public:
      */
     bool isRunning(){ return Status == ManagerStatus::RUNNING && !protocolClient.connectionLost(); }
     bool hasLostConnection() const { return protocolClient.connectionLost(); }
+    const std::string& getLastError() const { return lastError; }
+    bool shouldPollProtocol() const { return protocolClient.isInitialized() && !protocolClient.connectionLost(); }
     void serviceProtocolLink(bool allowPing);
     bool reconnectDevice(BaseDevice *device);
     bool reconnectProtocolLink();
     void endProtocolSession();
+    void setProtocolLinkControl(ProtocolLinkControl& control) { linkControl = &control; }
+    ProtocolLinkControl* getProtocolLinkControl() const { return linkControl; }
+    void notifyProtocolTransportDisconnected();
+    void serviceProtocolSafety();
 
     /**
      * @brief Set the running status of the manager

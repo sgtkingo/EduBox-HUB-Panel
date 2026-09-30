@@ -445,6 +445,12 @@ public:
      * @return true if redraw is pending, false otherwise.
      */
     bool getRedrawPending() const { return redrawPending; }
+    // Link loss cancels unsent state from the old generation. User must change
+    // settings/controls again; Run and reconnect never replay them implicitly.
+    void discardPendingSynchronization() {
+        isControlsSync = isConfigsSync = true;
+        isValuesSync = false; redrawPending = true;
+    }
 
     /**
      * @brief Mark live runtime values as stale so the next synchronization polls UPDATE.
@@ -495,7 +501,10 @@ public:
      */
     void syncControls(RuntimeProtocolSession &protocolClient)
     {
-        isControlsSync = false;
+        // Consume this user intent exactly once. Timeout may mean the Board
+        // executed a relative movement but its response was lost. Never retry
+        // automatically on the next visualization tick; require a new edit.
+        isControlsSync = true;
         redrawPending = false;
 
         vscp::Parameters valueMap;
@@ -510,6 +519,7 @@ public:
         auto response = protocolClient.control(vscp::String(UID.c_str()), valueMap);
         if (response.status == vscp::Status::Error)
         {
+            protocolClient.stopCommunication(); // Outcome uncertain: fail safe, no automatic retry.
             throw DeviceSynchronizationFailException("BaseDevice::syncControls", std::string(response.error.c_str()));
         }
 

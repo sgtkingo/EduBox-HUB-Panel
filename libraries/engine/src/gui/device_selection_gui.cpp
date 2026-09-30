@@ -251,7 +251,8 @@ void DeviceSelectionGui::handleConnectActionButtonClick()
 
     if (device->isPinConnectionActive()) {
         if (!deviceManager.disconnectAndUnassignDevice(device)) {
-            splashMessage("Failed to disconnect device.");
+            const std::string error = deviceManager.getLastError();
+            splashMessage(error.empty() ? "DISCONNECT failed without an error detail from the Board." : error.c_str());
             return;
         }
 

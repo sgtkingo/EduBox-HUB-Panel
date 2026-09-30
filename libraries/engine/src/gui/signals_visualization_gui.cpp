@@ -1164,7 +1164,8 @@ bool SignalsVisualizationGui::applyEditableValue(bool isValueControl, const std:
                 "device=%s key=%s",
                 currentDevice->UID.c_str(),
                 key.c_str());
-            showAlert("Protocol init failed");
+            const std::string error = deviceManager.getLastError();
+            showAlert(error.empty() ? "INIT failed without an error detail from the Board." : error.c_str());
             return false;
         }
 
@@ -1179,19 +1180,20 @@ bool SignalsVisualizationGui::applyEditableValue(bool isValueControl, const std:
                 key.c_str(),
                 syncError.c_str());
             showAlert(isValueControl
-                          ? (syncError.empty() ? "Control failed" : syncError.c_str())
-                          : (syncError.empty() ? "Config failed" : syncError.c_str()));
+                          ? (syncError.empty() ? "CONTROL failed without an error detail from the Board." : syncError.c_str())
+                          : (syncError.empty() ? "CONFIG failed without an error detail from the Board." : syncError.c_str()));
             return false;
         }
 
         return true;
     } catch (const std::exception &e) {
         Exception("SignalsVisualizationGui::applyEditableValue", e.what()).print();
-        showAlert(isValueControl ? "Failed to send control value" : "Failed to send config value");
+        showAlert(e.what());
         return false;
     } catch (...) {
         Exception("SignalsVisualizationGui::applyEditableValue", "Unknown exception").print();
-        showAlert(isValueControl ? "Failed to send control value" : "Failed to send config value");
+        showAlert(isValueControl ? "CONTROL failed because of an unknown internal error."
+                                 : "CONFIG failed because of an unknown internal error.");
         return false;
     }
 }
@@ -1503,7 +1505,8 @@ bool SignalsVisualizationGui::syncCurrentDevice()
 
     if (!deviceManager.ensureProtocolInitialized()) {
         debugLogMessage(DEBUG_VERBOSE_ERRORS, "SignalsVisualizationGui::syncCurrentDevice", "protocol init failed", "device=%s", currentDevice->UID.c_str());
-        showAlert("Protocol init failed");
+        const std::string error = deviceManager.getLastError();
+        showAlert(error.empty() ? "INIT failed without an error detail from the Board." : error.c_str());
         return false;
     }
 
@@ -1511,7 +1514,9 @@ bool SignalsVisualizationGui::syncCurrentDevice()
     const bool success = deviceManager.sync(currentDevice);
     if (!success) {
         debugLogMessage(DEBUG_VERBOSE_ERRORS, "SignalsVisualizationGui::syncCurrentDevice", "runtime sync failed", "device=%s error=%s", currentDevice->UID.c_str(), currentDevice->getError().c_str());
-        showAlert(currentDevice->getError().empty() ? "Sync failed" : currentDevice->getError().c_str());
+        showAlert(currentDevice->getError().empty()
+            ? "UPDATE failed without an error detail from the Board."
+            : currentDevice->getError().c_str());
         return false;
     }
 
@@ -1543,7 +1548,8 @@ void SignalsVisualizationGui::showVisualization()
 bool SignalsVisualizationGui::reconnectAfterDisconnect()
 {
     if (!deviceManager.reconnectDevice(currentDevice)) return false;
-    paused = settingsPanel.isVisible();
+    // Reconnect restores pins, never automatically replay cached actuator control.
+    paused = true;
     toolbarPanel.setPaused(paused);
     deviceManager.setRunning(!paused);
     updateChart(true);

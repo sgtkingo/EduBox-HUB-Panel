@@ -17,6 +17,7 @@ class RuntimeProtocolSession {
     bool lost = false;
     bool initRequired = false;
     bool closedLocally = false;
+    bool stopRequested = false;
 
     vscp::ResponseStatus stopped(const char *message) const {
         vscp::ResponseStatus response;
@@ -29,7 +30,7 @@ class RuntimeProtocolSession {
         auto response = isInitialized() ? request() : stopped("Protocol not initialized");
         if (response.status == vscp::Status::Ok) failures = 0;
         else if (++failures >= 5) {
-            lost = true;
+            stopCommunication();
             response.error = vscp::String("DISCONNECT: ") + response.error;
         }
         return response;
@@ -38,7 +39,8 @@ public:
     explicit RuntimeProtocolSession(vscp::Client& protocolClient, Clock timeSource = defaultClock)
         : client(protocolClient), clock(timeSource) {}
     bool connectionLost() const { return !closedLocally && (lost || client.sessionClosed()); }
-    bool bye() {
+    bool bye(bool waitForResponse = false) {
+        stopRequested = false; // Home/cancel must not arm a later radio reconnect.
         if (closedLocally) return true;
         const bool notifyPeer = monitoring || isInitialized() || connectionLost();
         // Always stop locally, including when the cable is absent or writing fails.
@@ -48,7 +50,7 @@ public:
         lost = false;
         failures = 0;
         pingFailures = 0;
-        return !notifyPeer || client.bye();
+        return !notifyPeer || client.bye(waitForResponse);
     }
     uint8_t consecutiveFailures() const { return failures; }
     uint8_t consecutivePingFailures() const { return pingFailures; }
@@ -67,7 +69,7 @@ public:
         const auto response = client.ping();
         lastPingMs = clock(); // Retry spacing starts after the response/timeout.
         if (response.status == vscp::Status::Ok) pingFailures = 0;
-        else if (++pingFailures >= 6) lost = true; // Initial probe + five retries.
+        else if (++pingFailures >= 6) stopCommunication(); // Initial probe + five retries.
     }
     bool isInitialized() const { return !initRequired && client.isInitialized(); }
     bool completeLinkReconnect() {
@@ -78,8 +80,22 @@ public:
         lost = false;
         return true;
     }
-    void stopCommunication() { lost = true; }
+    void stopCommunication() { lost = true; stopRequested = true; }
+    // Main-loop safety barrier after an uncertain CONTROL/batch reconnect failure.
+    bool serviceStopRequest() {
+        if (!stopRequested) return false;
+        stopRequested = false;
+        client.bye(); // Best effort; application also closes physical BLE.
+        client.closeSession();
+        initRequired = true; monitoring = false;
+        return true;
+    }
     void invalidateInitialization() { initRequired = true; monitoring = false; }
+    void notifyTransportDisconnected() {
+        client.closeSession();
+        initRequired = true; monitoring = false;
+        if (!closedLocally) lost = true;
+    }
     const char* apiVersion() const { return client.apiVersion(); }
 
     vscp::ResponseStatus init(const vscp::String& application = "", const vscp::String& database = "") {

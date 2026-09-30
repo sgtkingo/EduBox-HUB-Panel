@@ -260,7 +260,9 @@ void GuiManager::navigateTo(GuiState targetState)
     debugLogMessage("GuiManager::navigateTo", "gui navigation", "from=%d to=%d", static_cast<int>(currentState), static_cast<int>(targetState));
     connectionFeedback.hideDisconnect();
     applyRuntimePolicy(targetState);
-    if (targetState == GuiState::MAIN_MENU) {
+    const bool returningToCommunication = targetState == GuiState::COMMUNICATION_SELECTION &&
+        currentState == GuiState::SELECTION;
+    if (targetState == GuiState::MAIN_MENU || returningToCommunication) {
         deviceManager.endProtocolSession();
     }
     renderState(targetState);
@@ -287,11 +289,6 @@ void GuiManager::openVisualizationFlow()
 
 void GuiManager::completeCommunicationSelection(DefaultCommunicationMode mode)
 {
-    if (mode != DefaultCommunicationMode::CABLE) {
-        splashMessage("Wireless connection is not supported yet.");
-        return;
-    }
-
     navigateTo(navigationPolicy.finishCommunicationSelection(mode));
 }
 
@@ -451,7 +448,8 @@ void GuiManager::reconnectProtocolSession()
         ? screenRegistry.getVisualizationGui().reconnectAfterDisconnect()
         : deviceManager.reconnectProtocolLink();
     if (!connected) {
-        splashMessage("Reconnect failed. Check the cable and Board power, then try again.");
+        const std::string error = deviceManager.getLastError();
+        splashMessage(error.empty() ? "Reconnect failed without an error detail from the Board." : error.c_str());
         return;
     }
     connectionFeedback.hideDisconnect();
