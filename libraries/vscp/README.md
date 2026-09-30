@@ -1,6 +1,6 @@
 # VSCP client/server library
 
-The library implements **Virtual Sensors Communication Protocol** API `1.6`. Library version: `2.2.3`.
+The library implements **Virtual Sensors Communication Protocol** API `1.7`. Library version: `2.3.0`.
 It is not the event-based Very Simple Control Protocol.
 
 ## Components
@@ -80,8 +80,8 @@ these diagnostic lines: if it treats them as protocol requests, its extra error
 responses can interfere with INIT or cause a missing response UID. For hardware
 with a separate native USB connection, `CDCOnBoot=cdc` moves Serial logging to
 that USB console and keeps diagnostics off the protocol UART0.
-Response parameter order is irrelevant: `?api=1.6&status=1` and
-`?status=1&api=1.6` both parse successfully.
+Response parameter order is irrelevant: `?api=1.7&status=1` and
+`?status=1&api=1.7` both parse successfully.
 
 Before dispatch, the common transport removes bytes outside printable ASCII
 (`32..126`) and trims surrounding whitespace on both RX and TX. The Arduino

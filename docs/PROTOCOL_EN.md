@@ -1,6 +1,6 @@
 # VSCP Protocol
 
-VSCP (Virtual Sensors Communication Protocol) is a simple text-based protocol for communication between the EduBox HUB Panel HMI/firmware and a target board, real device, or emulator. The current project implementation uses VSCP API `1.6`.
+VSCP (Virtual Sensors Communication Protocol) is a simple text-based protocol for communication between the EduBox HUB Panel HMI/firmware and a target board, real device, or emulator. The current project implementation uses VSCP API `1.7`.
 
 The protocol follows a request-response model. The HMI always sends one command, and the counterpart responds with one response message. Runtime polling, configuration, control values, and pin assignment are all built on the same format.
 
@@ -165,7 +165,7 @@ Configs are persistent or setup parameters and are sent via `CONFIG`.
 Current full request:
 
 ```text
-?type=INIT&app=board&db=1.0&api=1.6
+?type=INIT&app=board&db=1.0&api=1.7
 ```
 
 Required/optional parameters:
@@ -445,7 +445,7 @@ sequenceDiagram
 
     UI->>DM: ensureProtocolInitialized()
     DM->>P: init(app, db)
-    P->>HW: ?type=INIT&app=board&db=1.0&api=1.6
+    P->>HW: ?type=INIT&app=board&db=1.0&api=1.7
     HW-->>P: ?status=1
     P-->>DM: OK
     DM-->>UI: connection ready
@@ -535,7 +535,7 @@ These exceptions should be printed in a catch handler using `Exception::print()`
 ### Sensor CPU Temp
 
 ```text
-HMI -> HW: ?type=INIT&app=board&db=1.0&api=1.6
+HMI -> HW: ?type=INIT&app=board&db=1.0&api=1.7
 HW -> HMI: ?status=1
 
 HMI -> HW: ?type=CONNECT&id=cpu_temp&pins=1
@@ -551,7 +551,7 @@ HW -> HMI: ?id=cpu_temp&status=1
 ### Actuator PWM LED Driver
 
 ```text
-HMI -> HW: ?type=INIT&app=board&db=1.0&api=1.6
+HMI -> HW: ?type=INIT&app=board&db=1.0&api=1.7
 HW -> HMI: ?status=1
 
 HMI -> HW: ?type=CONNECT&id=A00&pins=3
@@ -567,7 +567,7 @@ HW -> HMI: ?id=A00&status=1
 ### Hybrid Temperature Regulator
 
 ```text
-HMI -> HW: ?type=INIT&app=board&db=1.0&api=1.6
+HMI -> HW: ?type=INIT&app=board&db=1.0&api=1.7
 HW -> HMI: ?status=1
 
 HMI -> HW: ?type=CONNECT&id=H00&pins=3,5,6
