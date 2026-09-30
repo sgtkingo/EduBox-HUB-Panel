@@ -54,10 +54,11 @@ class BleLifecycleTest(unittest.TestCase):
         show_keyboard = gui.split("void CommunicationSelectionGui::showWirelessKeyboard()", 1)[1].split(
             "void CommunicationSelectionGui::hideWirelessKeyboard()", 1)[0]
         self.assertNotIn("lv_keyboard_create", show_wireless)
-        self.assertIn("lv_keyboard_create(wirelessKeyboardOverlay)", show_keyboard)
+        self.assertNotIn("lv_textarea_create", show_wireless)
+        self.assertIn("lv_textarea_create(dialog)", show_keyboard)
+        self.assertIn("lv_keyboard_create(dialog)", show_keyboard)
         self.assertIn("lv_obj_create(lv_layer_top())", show_keyboard)
-        self.assertIn("LV_EVENT_FOCUSED", show_wireless)
-        self.assertIn("LV_EVENT_CLICKED", show_wireless)
+        self.assertIn("startWirelessConnection(false)", show_keyboard)
 
     def test_cable_commissioning_and_manual_settings_contract(self):
         gui = (ROOT / "src/gui/communication_selection_gui.cpp").read_text(encoding="utf-8")
@@ -75,6 +76,9 @@ class BleLifecycleTest(unittest.TestCase):
         self.assertIn('addButton("Connect"', gui)
         self.assertIn('addButton("Scan"', gui)
         self.assertIn('addButton("Forget pairing"', gui)
+        self.assertIn("lv_obj_add_state(wirelessConnect, LV_STATE_DISABLED)", gui)
+        self.assertIn("lv_obj_add_state(wirelessForget, LV_STATE_DISABLED)", gui)
+        self.assertIn("lv_dropdown_set_selected(wirelessPeers, rememberedIndex)", gui)
         self.assertIn("client_.pair(resetExisting)", link)
         self.assertIn("source.savedBoardId", link)
 
