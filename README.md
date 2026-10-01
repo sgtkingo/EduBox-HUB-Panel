@@ -92,7 +92,7 @@ The bundled test catalog includes `H00` / **Temperature Regulator**:
 - 🧱 [Architecture notes](docs/wiki/ARCHITECTURE.md) — dataflow & message types.
 - 🗃️ [Data formats](docs/wiki/FORMATS.md) — DataBundle + CSV schema.
 - 📝 [Wiki guide](docs/wiki/WIKI_GUIDE.md) — how to add/edit sensor Wiki entries.
-- 🚢 [Release workflow rules](docs/dev/RELEASE_WORKFLOW_RULES.md) and [release notes](RELEASE_NOTES.md).
+- 🚢 [Release workflow rules](docs/dev/RELEASE_WORKFLOW.md) and [release notes](RELEASE_NOTES.md).
 - 📄 [License](LICENCE).
 
 ---
