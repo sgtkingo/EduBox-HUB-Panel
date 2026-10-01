@@ -173,23 +173,93 @@ Contributions are welcome, especially:
 
 ---
 
-## Bluetooth bridge (bluetooth_bridge branch)
+## Bluetooth bridge
 
-Communication now supports UART or secure Bluetooth LE to an EduBox Board.
-Wireless scans Boards, accepts a six-digit commissioning PIN from the Board
-console and remembers the authenticated peer in NVS. BLE runs outside the GUI
-task; only the main loop owns VSCP and LVGL. Radio reconnection alone never
-restores Run or replays pending CONFIG/CONTROL.
+The Panel can communicate with an EduBox Board over secure Bluetooth LE. A Board
+and Panel are paired once; the Panel then remembers the authenticated Board and
+reconnects to it automatically in later sessions. In a classroom with several
+Boards and Panels, always compare the **Board ID shown in the Panel with the ID
+printed on the Board label**.
 
-Install ESP32 core 3.1.1 and NimBLE-Arduino 2.5.1. On PowerShell:
-`scripts/build_bluetooth_bridge.ps1 -ArduinoCli arduino-cli -Jobs 4`.
-This builds the existing ESP32-S3/OPI PSRAM/4 MB huge_app profile without upload.
-The script and branch CI enforce Secure Connections (no legacy pairing) on both
-C and C++ compilation. Do not omit these flags when building in another IDE.
+### Recommended: automatic pairing with a cable
 
-See [the complete guide and HW checklist](https://github.com/sgtkingo/EduBox-HUB/blob/bluetooth_bridge/docs/BLUETOOTH_BRIDGE.md).
-Native tests and successful builds do not verify radio, touchscreen coexistence
-or physical actuator shutdown.
+![Default automatic Bluetooth pairing: Panel connected by commissioning cable to Board](docs/img/bluetooth_cable_pairing.svg)
+
+This is the default and recommended commissioning method. The cable is used only
+to identify and authorize the correct Board. Normal communication switches to
+Bluetooth after pairing, so the cable can be removed when the success screen is
+shown.
+
+1. Power on the **Panel** and the **Board**.
+2. On the Panel, open **Communication** and tap **Wireless (BLE)**.
+3. If the Panel has no remembered Board, it asks for a cable connection. Connect
+   the Board directly to the Panel with the UART commissioning cable.
+4. Wait while the Panel reads the Board ID and PIN, scans for that exact Board,
+   and completes secure Bluetooth pairing. No PIN entry is required.
+5. When **Success!** appears, disconnect the commissioning cable and tap
+   **Continue**.
+
+The Panel remembers the Board. On subsequent visits, tapping **Wireless (BLE)**
+starts the Bluetooth connection automatically and shows a progress indicator.
+
+If the connected Board is already paired with a different Panel, choose
+**Forget Board & replace pairing** when prompted. Keep the cable connected while
+the previous pairing is removed from both devices.
+
+### Manual pairing with Board ID and PIN
+
+Use manual pairing when a commissioning cable is not available. The Board must
+be unpaired and advertising within its pairing window. The exact **Board ID** and
+six-digit **PIN** are printed on the Board label; they are also written to the
+Board UART log at startup.
+
+1. Power on the Board and keep it close to the Panel. Restart an unpaired Board
+   if its pairing window has expired.
+2. On the Panel, open **Communication**.
+3. Tap the small **settings (gear)** button next to **Wireless (BLE)**.
+4. Wait for discovery to finish. If necessary, tap **Scan** again.
+5. Open the Board dropdown and select the entry whose Board ID exactly matches
+   the physical label.
+6. Tap the green **Connect** button.
+7. Enter the six-digit PIN in the floating PIN dialog and confirm it with the
+   keyboard's confirmation key.
+8. Wait for **Success!**, then tap **Continue**.
+
+When a pairing is already stored, **Connect** is disabled and **Forget pairing**
+is enabled. With no stored pairing, the states are reversed. After discovery,
+the remembered Board is selected automatically when it is present.
+
+### Forget or replace a pairing
+
+Pairing information is stored on both the Panel and the Board. It must therefore
+be removed from both devices; deleting only the Panel record would leave the
+Board locked to the previous peer.
+
+1. Open **Communication**, then tap the **settings (gear)** button next to
+   **Wireless (BLE)**.
+2. Connect the paired Board directly to the Panel with the UART commissioning
+   cable and make sure the Board is powered.
+3. Tap the red **Forget pairing** button in the lower-right corner.
+4. Wait until the Panel confirms that pairing was removed from both Board and
+   Panel.
+5. Return to BLE Settings to scan and pair again, or close the screen.
+
+### Bluetooth troubleshooting
+
+| Message or symptom | What to check |
+| --- | --- |
+| `No PAIR response in 5 seconds` | Check Board power and the direct UART commissioning connection, including TX, RX and GND. Reconnect the cable and tap **Retry**. |
+| `This Board is already paired` | Keep the cable connected and choose **Forget Board & replace pairing**, or cancel if the existing pairing should remain. |
+| Board ID is not found during scanning | Confirm that the Board is powered, nearby and advertising. Compare the dropdown ID with the label, then restart an unpaired Board and tap **Scan** again. |
+| `Pairing failed: check PIN / BOOT reset` | Verify all six PIN digits against the Board label or UART startup log. Prefer automatic cable pairing if available. |
+| **Connect** is greyed out | The Panel already remembers a Board. Use the normal **Wireless (BLE)** button, or remove the old pairing with **Forget pairing** first. |
+| **Forget pairing** is greyed out | This Panel has no remembered Board, so there is no local pairing to remove. |
+| `Remembered Board is unavailable` | Check that the paired Board is powered and in range. If this Panel must be assigned to another Board, use the cable-based Forget workflow. |
+| Forget or replacement fails | Power-cycle the Board, reconnect the UART commissioning cable, and retry. Make sure it is the Board whose ID is stored in the Panel. If the failure persists, hold the Board **BOOT** button for at least 3 seconds, then run **Forget pairing** over the cable again so the Panel record is cleared too. |
+
+Bluetooth pairing uses authenticated Secure Connections. There is no insecure
+legacy-pairing fallback, and the Panel never stores the six-digit commissioning
+PIN after pairing succeeds.
 
 ## 📄 License
 

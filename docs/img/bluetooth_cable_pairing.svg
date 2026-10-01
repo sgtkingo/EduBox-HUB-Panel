@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-labelledby="title desc">
+  <title id="title">Default automatic Bluetooth pairing</title>
+  <desc id="desc">EduBox Panel connected by a UART commissioning cable to an EduBox Board. After commissioning, communication continues over secure Bluetooth.</desc>
+  <defs>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1378c7"/>
+      <stop offset="1" stop-color="#055da9"/>
+    </linearGradient>
+    <linearGradient id="board" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#33a36b"/>
+      <stop offset="1" stop-color="#16744a"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#10243a" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="360" rx="24" fill="#f5f8fb"/>
+  <text x="600" y="42" text-anchor="middle" font-family="Arial, sans-serif" font-size="25" font-weight="700" fill="#17324d">Default automatic pairing</text>
+
+  <g filter="url(#shadow)">
+    <rect x="75" y="84" width="310" height="190" rx="24" fill="url(#panel)"/>
+    <rect x="104" y="111" width="252" height="116" rx="10" fill="#eaf6ff" stroke="#b9d8ee" stroke-width="4"/>
+    <circle cx="230" cy="250" r="9" fill="#d9efff"/>
+  </g>
+  <text x="230" y="154" text-anchor="middle" font-family="Arial, sans-serif" font-size="25" font-weight="700" fill="#055da9">EDUBOX PANEL</text>
+  <text x="230" y="190" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#31536d">Communication</text>
+
+  <g filter="url(#shadow)">
+    <rect x="815" y="84" width="310" height="190" rx="24" fill="url(#board)"/>
+    <circle cx="862" cy="128" r="12" fill="#d8f5e6"/>
+    <circle cx="901" cy="128" r="12" fill="#f6d65d"/>
+    <rect x="850" y="162" width="240" height="70" rx="10" fill="#e9fff4" stroke="#b7e5ce" stroke-width="4"/>
+  </g>
+  <text x="970" y="202" text-anchor="middle" font-family="Arial, sans-serif" font-size="25" font-weight="700" fill="#176846">EDUBOX BOARD</text>
+
+  <path d="M385 180 H475" fill="none" stroke="#4b5968" stroke-width="12" stroke-linecap="round"/>
+  <rect x="463" y="158" width="40" height="44" rx="7" fill="#667585"/>
+  <path d="M503 180 H697" fill="none" stroke="#f29d38" stroke-width="16" stroke-linecap="round"/>
+  <rect x="697" y="158" width="40" height="44" rx="7" fill="#667585"/>
+  <path d="M737 180 H815" fill="none" stroke="#4b5968" stroke-width="12" stroke-linecap="round"/>
+
+  <text x="600" y="134" text-anchor="middle" font-family="Arial, sans-serif" font-size="19" font-weight="700" fill="#a95c00">UART commissioning cable</text>
+  <text x="600" y="229" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" fill="#45576a">Board ID + PIN are exchanged automatically</text>
+
+  <path d="M468 310 C520 276 680 276 732 310" fill="none" stroke="#1677c8" stroke-width="5" stroke-linecap="round" stroke-dasharray="10 10"/>
+  <path d="M714 294 L735 310 L710 319" fill="none" stroke="#1677c8" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="600" y="345" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#1264a3">Cable can be removed after Success — operation continues over secure BLE</text>
+</svg>
