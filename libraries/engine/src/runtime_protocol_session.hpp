@@ -98,8 +98,9 @@ public:
     }
     const char* apiVersion() const { return client.apiVersion(); }
 
-    vscp::ResponseStatus init(const vscp::String& application = "", const vscp::String& database = "") {
-        auto response = client.init(application, database);
+    vscp::ResponseStatus init(const vscp::String& application = "", const vscp::String& database = "",
+                              bool hold = true) {
+        auto response = client.init(application, database, hold);
         initRequired = response.status != vscp::Status::Ok;
         monitoring = !initRequired;
         if (monitoring) {

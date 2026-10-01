@@ -135,6 +135,7 @@ class VSCPEmulator:
         
         # Protocol state
         self.initialized = False
+        self.hold_enabled = True
         self.connected_sensors = {}  # uid -> pin mapping
         self.sensor_configs = {}     # uid -> config dict
         self.control_values = {}     # uid -> control dict
@@ -341,12 +342,16 @@ class VSCPEmulator:
         app = params.get('app', 'Unknown')
         dbversion = params.get('db', '')
         api = params.get('api', '')
+        hold = params.get('hold', '1')
+        if hold not in ('0', '1'):
+            return self.build_message({'status': '0', 'error': 'Invalid hold: expected 0 or 1'})
         
         # Simulate version compatibility check
         response_params = {}
         
         if not self.strict_api or not api or api == self.API_VERSION:
             self.initialized = True
+            self.hold_enabled = hold == '1'
             response_params = {
                 'status': '1'
             }

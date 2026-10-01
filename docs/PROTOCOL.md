@@ -175,7 +175,13 @@ Required/optional parameters:
 | `type=INIT` | yes | Command type |
 | `app` | recommended | Application/catalog name, for example `board` |
 | `db` | recommended | Device DB version, for example `1.0` |
-| `api` | yes for the current flow | VSCP API version, currently `1.4` |
+| `api` | yes for the current flow | VSCP API version, currently `1.7` |
+| `hold` | optional | `1` (default): server PING enabled; `0`: no server-initiated PING |
+
+For example, append `&hold=0` to INIT to disable server-initiated PING. The
+Board also disables its inactivity lease in this mode; BYE or physical link
+loss still ends the session. A later successful INIT without `hold=0` restores
+the default. Client-initiated PING remains available.
 
 Successful response:
 
@@ -186,7 +192,7 @@ Successful response:
 Error response:
 
 ```text
-?status=0&error=API mismatch - got 1.2, expected 1.4
+?status=0&error=API mismatch - got 1.2, expected 1.7
 ```
 
 Emulator:

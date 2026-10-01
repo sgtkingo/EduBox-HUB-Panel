@@ -180,11 +180,12 @@ bool DeviceManager::ensureProtocolInitialized()
         return true;
     }
 
-    return initializeProtocolConnection();
+    return initializeProtocolConnection(protocolHold);
 }
 
-bool DeviceManager::initializeProtocolConnection()
+bool DeviceManager::initializeProtocolConnection(bool hold)
 {
+    protocolHold = hold;
     lastError.clear();
     if (linkControl && linkControl->wirelessSelected()) {
         const auto linkInfo = linkControl->info();
@@ -201,7 +202,8 @@ bool DeviceManager::initializeProtocolConnection()
     for (size_t i = 0; i < attempts; i++)
     {
         debugLogMessage(DEBUG_VERBOSE_IMPORTANT, "DeviceManager::initializeProtocolConnection", "protocol init", "attempt=%u", static_cast<unsigned int>(i + 1));
-        response = protocolClient.init(vscp::String(catalog.getApplication().c_str()), vscp::String(catalog.getVersion().c_str()));
+        response = protocolClient.init(vscp::String(catalog.getApplication().c_str()),
+                                       vscp::String(catalog.getVersion().c_str()), protocolHold);
         if (response.status == vscp::Status::Ok)
         {
             lastError.clear();

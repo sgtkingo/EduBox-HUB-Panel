@@ -58,6 +58,7 @@ private:
     bool initialized = false;                 ///< Initialization state flag
     ManagerStatus Status = ManagerStatus::STOPPED; ///< Current status of the manager
     std::string lastError;                    ///< User-facing detail from the latest failed operation.
+    bool protocolHold = true;                 ///< Persist INIT hold choice across lazy reconnects.
 
     std::vector<BaseDevice *> collectAssignedDevicesFromPinMap() const;
     std::vector<BaseDevice *> filterCompleteDevices(const std::vector<BaseDevice *> &devices) const;
@@ -186,7 +187,7 @@ public:
      * @brief Send an explicit VSCP INIT handshake for the current catalog metadata.
      * @return True if the remote endpoint acknowledges the INIT request.
      */
-    bool initializeProtocolConnection();
+    bool initializeProtocolConnection(bool hold = true);
 
     /**
      * @brief Connect assigned devices to pins (bulk operation).
